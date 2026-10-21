@@ -25,7 +25,7 @@ renderer.xr.enabled = true;
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
 document.body.appendChild(renderer.domElement);
 
-// --- BOTÓN DE AR/VR ---
+// --- BOTÓN HÍBRIDO: AR si está disponible, si no VR ---
 let xrButton;
 const arSupported = navigator.xr && navigator.xr.isSessionSupported;
 
@@ -53,34 +53,6 @@ if (arSupported) {
   document.body.appendChild(xrButton);
 }
 
-// --- BOTÓN DE ACTIVAR SONIDO (Nuevo) ---
-const btnSonido = document.createElement('button');
-btnSonido.textContent = '🔊 ACTIVAR SONIDO';
-btnSonido.style.position = 'absolute';
-btnSonido.style.top = '20px';
-btnSonido.style.right = '20px';
-btnSonido.style.padding = '10px 20px';
-btnSonido.style.fontSize = '16px';
-btnSonido.style.background = '#aa00ff';
-btnSonido.style.color = 'white';
-btnSonido.style.border = 'none';
-btnSonido.style.borderRadius = '8px';
-btnSonido.style.cursor = 'pointer';
-btnSonido.style.zIndex = '1000';
-document.body.appendChild(btnSonido);
-
-btnSonido.addEventListener('click', () => {
-  if (listener.context.state === 'suspended') {
-    listener.context.resume().then(() => {
-      alert('¡Sonido activado! Ahora puedes encender la bomba y abrir las válvulas.');
-      btnSonido.style.display = 'none';
-    });
-  } else {
-    alert('El sonido ya está activo.');
-    btnSonido.style.display = 'none';
-  }
-});
-
 const controls = new OrbitControls(camera, renderer.domElement);
 controls.target.set(0, 1, -1.5);
 controls.enableDamping = true;
@@ -92,7 +64,6 @@ renderer.xr.addEventListener('sessionstart', (event) => {
     scene.background = null;
     scene.fog = null;
   }
-  // Si el contexto está suspendido al entrar en XR, lo reanudamos
   if (listener.context.state === 'suspended') {
     listener.context.resume();
   }
@@ -110,16 +81,16 @@ const dir = new THREE.DirectionalLight(0xffffff, 2.0);
 dir.position.set(10, 15, 10);
 scene.add(dir);
 
-// --- BANCO DE FLUIDOS ---
+// --- BANCO DE FLUIDOS (Escala 0.86 = 20% más grande que 0.8) ---
 const banco = new Banco();
-banco.group.scale.set(0.96, 0.96, 0.96); 
+banco.group.scale.set(0.86, 0.86, 0.86); 
 banco.group.position.set(1.5, -1.0, -1.5); 
 scene.add(banco.group);
 
-// --- TABLERO DE CONTROL ---
+// --- TABLERO DE CONTROL (Escala proporcional al banco) ---
 const tablero = new TableroVR(banco);
-tablero.group.scale.set(0.96, 0.96, 0.96);
-tablero.group.position.set(1.5, -0.8, -1.0);
+tablero.group.scale.set(1.3, 1.3, 1.3);
+tablero.group.position.set(1.5, -0.6, -1.0);
 scene.add(tablero.group);
 
 // --- SONIDO SINTÉTICO ---
@@ -135,7 +106,6 @@ function crearRuidoBlanco() {
   return buffer;
 }
 
-// Sonido de la bomba
 const fuenteBomba = ctx.createBufferSource();
 fuenteBomba.buffer = crearRuidoBlanco();
 fuenteBomba.loop = true;
@@ -152,7 +122,6 @@ filtroBomba.connect(gananciaBomba);
 gananciaBomba.connect(ctx.destination);
 fuenteBomba.start();
 
-// Sonido del agua
 const fuenteAgua = ctx.createBufferSource();
 fuenteAgua.buffer = crearRuidoBlanco();
 fuenteAgua.loop = true;
@@ -170,7 +139,6 @@ filtroAgua.connect(gananciaAgua);
 gananciaAgua.connect(ctx.destination);
 fuenteAgua.start();
 
-// Asignar al banco
 banco.gananciaBomba = gananciaBomba;
 banco.gananciaAgua = gananciaAgua;
 
