@@ -1,47 +1,84 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { VRButton } from 'three/addons/webxr/VRButton.js';
 import { ARButton } from 'three/addons/webxr/ARButton.js';
 import { Banco } from './banco.js';
 import { TableroVR } from './tablero.js';
 
 const scene = new THREE.Scene();
-scene.background = new THREE.Color(0x0a0a15); 
-scene.fog = new THREE.Fog(0x0a0a15, 10, 35);
+// Fondo transparente para que en AR se vea el mundo real.
+// Si no hay AR, este fondo se reemplaza con el color oscuro.
+scene.background = null; 
+scene.fog = null;
 
 const camera = new THREE.PerspectiveCamera(60, innerWidth / innerHeight, 0.1, 100);
-camera.position.set(0, 1.6, 0); // Altura de los ojos en AR
+camera.position.set(0, 1.6, 0); // Altura de los ojos
 
 const listener = new THREE.AudioListener();
 camera.add(listener);
 
-const renderer = new THREE.WebGLRenderer({ antialias: true, xrCompatible: true });
+const renderer = new THREE.WebGLRenderer({ 
+  antialias: true, 
+  xrCompatible: true, 
+  alpha: true // Importante para AR (fondo transparente)
+});
 renderer.setSize(innerWidth, innerHeight);
 renderer.xr.enabled = true;
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
 document.body.appendChild(renderer.domElement);
 
-// --- BOTÓN DE AR ---
-const arButton = ARButton.createButton(renderer, {
-  requiredFeatures: ['hit-test'], // Detectar superficies
-  optionalFeatures: ['dom-overlay', 'local-floor'],
-  domOverlay: { root: document.body }
-});
-document.body.appendChild(arButton);
+// --- BOTÓN HÍBRIDO: AR si está disponible, si no VR ---
+let xrButton;
+const arSupported = navigator.xr && navigator.xr.isSessionSupported;
 
-// --- CONTROLES DE RATÓN (Solo pantalla plana) ---
+if (arSupported) {
+  navigator.xr.isSessionSupported('immersive-ar').then((supported) => {
+    if (supported) {
+      // AR (Passthrough)
+      xrButton = ARButton.createButton(renderer, {
+        requiredFeatures: ['hit-test'],
+        optionalFeatures: ['dom-overlay', 'local-floor'],
+        domOverlay: { root: document.body }
+      });
+    } else {
+      // VR (con fondo oscuro)
+      scene.background = new THREE.Color(0x0a0a15);
+      xrButton = VRButton.createButton(renderer);
+    }
+    document.body.appendChild(xrButton);
+  }).catch(() => {
+    // Si falla la detección, usar VR por defecto
+    scene.background = new THREE.Color(0x0a0a15);
+    xrButton = VRButton.createButton(renderer);
+    document.body.appendChild(xrButton);
+  });
+} else {
+  // Navegador sin WebXR (solo pantalla plana)
+  scene.background = new THREE.Color(0x0a0a15);
+  xrButton = VRButton.createButton(renderer);
+  document.body.appendChild(xrButton);
+}
+
+// --- CONTROLES DE RATÓN ---
 const controls = new OrbitControls(camera, renderer.domElement);
-controls.target.set(0, 1, -1);
+controls.target.set(0, 1, -1.5);
 controls.enableDamping = true;
 controls.dampingFactor = 0.05;
 
-renderer.xr.addEventListener('sessionstart', () => {
+// Manejo de sesiones XR
+renderer.xr.addEventListener('sessionstart', (event) => {
   controls.enabled = false;
-  scene.background = null; // En AR se ve el mundo real a través de la cámara
+  // Si es sesión AR, quitar fondo. Si es VR, mantener fondo oscuro.
+  if (event.session.mode === 'immersive-ar' || event.session.environmentBlendMode === 'alpha-blend') {
+    scene.background = null;
+    scene.fog = null;
+  }
 });
 
 renderer.xr.addEventListener('sessionend', () => {
   controls.enabled = true;
   scene.background = new THREE.Color(0x0a0a15);
+  scene.fog = new THREE.Fog(0x0a0a15, 10, 35);
 });
 
 // --- LUCES ---
@@ -51,29 +88,31 @@ const dir = new THREE.DirectionalLight(0xffffff, 2.0);
 dir.position.set(10, 15, 10);
 scene.add(dir);
 
-// --- BANCO DE FLUIDOS ---
+// --- BANCO DE FLUIDOS (CENTRADO A LA DERECHA) ---
 const banco = new Banco();
-
-// CENTRAMOS EL BANCO FRENTE AL USUARIO
-// Reducimos a 0.3 de tamaño y lo ponemos 1.5 metros al frente
 banco.group.scale.set(0.3, 0.3, 0.3);
-banco.group.position.set(0, 0, -1.5); // X=0 para centrarlo, Z=-1.5 para que esté al frente
+
+// ¡AQUÍ ESTÁ EL TRUCO! Desplazamos a la DERECHA (X positiva)
+// para compensar que los objetos internos están en X negativas.
+// 1.5 metros a la derecha según tu indicación.
+banco.group.position.set(1.5, 0, -1.5); 
 scene.add(banco.group);
 
 // --- TABLERO DE CONTROL ---
 const tablero = new TableroVR(banco);
-// El tablero lo ubicamos justo debajo del banco para que no estorbe
-tablero.group.scale.set(0.3, 0.3, 0.3); 
-tablero.group.position.set(0, -0.5, -1.2); 
+tablero.group.scale.set(0.3, 0.3, 0.3);
+// El tablero lo movemos con el banco para que quede frente al usuario
+tablero.group.position.set(1.5, -0.5, -1.2);
 scene.add(tablero.group);
 
-// --- CONTROLADORES VR ---
+// --- CONTROLADORES VR/AR ---
 const controller1 = renderer.xr.getController(0);
 scene.add(controller1);
 
 const controller2 = renderer.xr.getController(1);
 scene.add(controller2);
 
+// Líneas del láser
 const geometryLaser = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0, 0, 0), new THREE.Vector3(0, 0, -1)]);
 const materialLaser = new THREE.LineBasicMaterial({ color: 0xff0000 });
 const laser1 = new THREE.Line(geometryLaser, materialLaser);
@@ -88,7 +127,6 @@ const raycaster = new THREE.Raycaster();
 
 function onSelectStart(event) {
   const controller = event.target;
-  
   const tempMatrix = new THREE.Matrix4();
   tempMatrix.identity().extractRotation(controller.matrixWorld);
 
