@@ -5,12 +5,14 @@ import { ARButton } from 'three/addons/webxr/ARButton.js';
 import { Banco } from './banco.js';
 import { TableroVR } from './tablero.js';
 
+console.log("✅ main.js v3 cargado correctamente");
+
 const scene = new THREE.Scene();
 scene.background = null; 
 scene.fog = null;
 
 const camera = new THREE.PerspectiveCamera(60, innerWidth / innerHeight, 0.1, 100);
-camera.position.set(0, 1.6, 0); 
+camera.position.set(0, 1.6, 2); // Cámara un poco más atrás para ver todo el banco
 
 const listener = new THREE.AudioListener();
 camera.add(listener);
@@ -53,35 +55,39 @@ if (arSupported) {
   document.body.appendChild(xrButton);
 }
 
-// --- BOTÓN DE ACTIVAR SONIDO (Ahora como elemento fijo y visible) ---
+// --- BOTÓN DE ACTIVAR SONIDO (Visible y fijo) ---
 const btnSonido = document.createElement('button');
 btnSonido.textContent = '🔊 ACTIVAR SONIDO';
 btnSonido.style.position = 'fixed';
 btnSonido.style.top = '20px';
 btnSonido.style.right = '20px';
-btnSonido.style.padding = '12px 24px';
-btnSonido.style.fontSize = '18px';
+btnSonido.style.padding = '15px 25px';
+btnSonido.style.fontSize = '20px';
 btnSonido.style.fontWeight = 'bold';
 btnSonido.style.background = '#aa00ff';
 btnSonido.style.color = 'white';
-btnSonido.style.border = 'none';
-btnSonido.style.borderRadius = '8px';
+btnSonido.style.border = '3px solid #ffffff';
+btnSonido.style.borderRadius = '10px';
 btnSonido.style.cursor = 'pointer';
-btnSonido.style.zIndex = '9999';
-btnSonido.style.boxShadow = '0 4px 8px rgba(0,0,0,0.5)';
+btnSonido.style.zIndex = '99999';
+btnSonido.style.boxShadow = '0 0 15px rgba(170, 0, 255, 0.8)';
 document.body.appendChild(btnSonido);
 
 btnSonido.addEventListener('click', () => {
+  console.log("Botón de sonido clickeado");
   if (listener.context.state === 'suspended') {
     listener.context.resume().then(() => {
       alert('¡Sonido activado!');
       btnSonido.style.display = 'none';
     });
+  } else {
+    alert('El sonido ya está activo.');
+    btnSonido.style.display = 'none';
   }
 });
 
 const controls = new OrbitControls(camera, renderer.domElement);
-controls.target.set(0, 0.5, -1.5);
+controls.target.set(0, 0.5, -1.5); // Apuntamos al centro del banco
 controls.enableDamping = true;
 controls.dampingFactor = 0.05;
 
@@ -108,29 +114,17 @@ const dir = new THREE.DirectionalLight(0xffffff, 2.0);
 dir.position.set(10, 15, 10);
 scene.add(dir);
 
-// --- BANCO DE FLUIDOS (Centrado y a la altura de los ojos) ---
+// --- BANCO DE FLUIDOS (Centrado) ---
 const banco = new Banco();
 banco.group.scale.set(0.5, 0.5, 0.5); 
-
-// ¡AQUÍ ESTÁ EL TRUCO! 
-// Los objetos internos del banco están en X=-3 (tanque), X=-1 (descarga), etc.
-// Si el grupo está en X=0, el centro visual está a la izquierda.
-// Al poner el grupo en X=1.5, el tanque (X=-3*0.5=-1.5) queda en X=0, 
-// y la descarga (X=-1*0.5=-0.5) queda en X=1.0. El conjunto se centra.
-banco.group.position.set(1.5, -0.8, -1.5); 
+banco.group.position.set(1.5, -0.8, -1.5); // Centra el tanque en X=0
 scene.add(banco.group);
 
 // --- TABLERO DE CONTROL (5 cm sobre la descarga) ---
 const tablero = new TableroVR(banco);
 tablero.group.scale.set(0.936, 0.936, 0.936);
-
-// Cálculo de la altura de la descarga:
-// Descarga local Y = 1.5, su altura máxima es 0.5. Escala 0.5.
-// Altura global = (1.5 + 0.5) * 0.5 = 1.0.
-// Le sumamos 5 cm (0.05) = 1.05.
-// Como el banco está en Y = -0.8, la altura final es 1.05 - 0.8 = 0.25.
-// Le sumamos un margen: 0.35.
-tablero.group.position.set(1.5, 0.35, -1.0);
+// Y = 1.42 (borde inferior a 5 cm de la descarga) y X = 1.2 (sobre la descarga)
+tablero.group.position.set(1.2, 0.63, -1.0);
 scene.add(tablero.group);
 
 // --- SONIDO SINTÉTICO ---
