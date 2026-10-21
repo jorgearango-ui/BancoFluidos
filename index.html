@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Banco de Fluidos VR/AR</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <!-- Panel HTML para pantalla normal (se oculta en VR) -->
+  <div id="info" style="display: block;">
+    <h1>Banco de Fluidos Virtual</h1>
+    <div id="panel">
+      <div>ρ = <span id="rho">1000</span> kg/m³</div>
+      <div>Nivel h = <span id="h">0.5</span> m</div>
+      <div>P. Fondo Tanque = <span id="pFondo">0</span> kPa</div>
+      <div>Nivel Tanque Dos = <span id="nivelDescarga">0.00</span> m
+        <span id="estadoDescarga" style="color:#ff5555; font-weight:bold;">[BLOQUEADO]</span>
+      </div>
+      <div>Nivel Venturi = <span id="nivelVenturi">0.00</span> m
+        <span id="estadoVenturi" style="color:#ff5555; font-weight:bold;">[BLOQUEADO]</span>
+      </div>
+      <div>Tanque de Almacenamiento = <span id="nivelReservorio">100</span>%</div>
+    </div>
+    <div id="controles">
+      <label>Radio Tanque Principal: <span id="valRadioTanque" style="color:#00aaff; font-weight:bold;">0.6</span> m
+        <input type="range" id="radio" min="0.4" max="1.0" step="0.1" value="0.6" />
+      </label>
+      
+      <label style="margin-top: 5px; color: #00ffff;">Radio Venturi: <span id="valRadioVenturi" style="color:#00ffff; font-weight:bold;">0.08</span> m
+        <input type="range" id="radioVenturi" min="0.02" max="0.10" step="0.01" value="0.08" />
+      </label>
+
+      <label style="margin-top: 5px; color: #ffaa00;">Potencia Bomba: <span id="valPotenciaBomba" style="color:#ffaa00; font-weight:bold;">1000</span> W
+        <input type="range" id="potenciaBomba" min="100" max="2000" step="100" value="1000" />
+      </label>
+
+      <button id="btnReset" style="background:#8888ff; margin-top: 5px; font-weight:bold;">⟳ RESET</button>
+      <button id="btnPausa" style="background:#ffaa00; margin-top: 5px; font-weight:bold;">⏸ PAUSAR VECTOR</button>
+      <button id="btnInforme" style="background:#2b579a; color: white; margin-top: 5px; font-weight:bold;">📄 GENERAR INFORME (Word)</button>
+      
+      <button id="btnLlaveEntrada" style="background:#ff5555; margin-top: 5px;">Abrir Llave Tanque Principal</button>
+      <button id="btnLlaveSalida" style="background:#ff5555; margin-top: 5px;" disabled>Abrir Válvula Tanque Principal</button>
+      <button id="btnVaciar" style="background:#ff5555; margin-top: 5px;" disabled>Abrir Válvula Tanque Dos</button>
+      <button id="btnBomba" style="background:#ff5555; margin-top: 5px;">Encender Motobomba</button>
+      
+      <label style="margin-top: 10px;">Fluido:
+        <select id="fluido">
+          <option value="1000">Agua (1000)</option>
+          <option value="1420">Miel (1420)</option>
+          <option value="680">Gasolina (680)</option>
+          <option value="1260">Glicerina (1260)</option>
+        </select>
+      </label>
+      <button id="btnVR" style="margin-top: 15px;">Entrar en VR</button>
+    </div>
+  </div>
+
+  <!-- Librería para generar Word -->
+  <script src="https://unpkg.com/docx@7.8.2/build/index.js"></script>
+
+  <!-- Importmap de Three.js -->
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+        "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+      }
+    }
+  </script>
+  <script type="module" src="main.js"></script>
+</body>
+</html>
