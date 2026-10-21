@@ -83,7 +83,7 @@ scene.add(dir);
 
 // --- BANCO DE FLUIDOS (Escala 0.86 = 20% más grande que 0.8) ---
 const banco = new Banco();
-banco.group.scale.set(0.86, 0.86, 0.86); 
+banco.group.scale.set(0.5, 0.5, 0.5); 
 banco.group.position.set(1.5, -1.0, -1.5); 
 scene.add(banco.group);
 
