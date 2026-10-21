@@ -115,7 +115,7 @@ export class Banco {
 
     // Reservorio inicia al 64 % (80 % original − 20 %) para que la parábola sea más larga
     const volMaxBomba = this.bomba.getAreaBase() * this.bomba.alturaMaxima;
-    this.bomba.setVolumen(volMaxBomba * 0.64);
+    this.bomba.setVolumen(volMaxBomba * 0.9);
     this.tanque.setVolumen(0.01);
     this.descarga.setVolumen(0);
     this.tuberia.setFlujoActivo(false);
