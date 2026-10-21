@@ -721,5 +721,7 @@ export class Banco {
 
     this._actualizarBloqueos();
     this.bomba.update();
+    this.tanque.update(); 
+  
   }
 }

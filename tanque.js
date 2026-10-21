@@ -11,7 +11,6 @@ export class Tanque {
     this.llaveSalidaAbierta = false; 
     this.colorFluido = 0x0077ff;
 
-    // 1. CRISTAL
     this.cristalMat = new THREE.MeshPhongMaterial({ 
       color: 0x88ccff, transparent: true, opacity: 0.2, side: THREE.DoubleSide, depthWrite: false 
     });
@@ -19,7 +18,6 @@ export class Tanque {
     this.cristal.position.y = this.alturaMaxima / 2; 
     this.group.add(this.cristal);
 
-    // 2. FLUIDO
     this.fluidoMat = new THREE.MeshStandardMaterial({ color: this.colorFluido, transparent: true, opacity: 0.85 });
     this.fluidoGeo = new THREE.CylinderGeometry(0.98, 0.98, 1, 32);
     this.fluidoGeo.translate(0, 0.5, 0); 
@@ -62,6 +60,8 @@ export class Tanque {
     this.actualizarPosicionManometros();
   }
 
+  // ... (Los métodos _crearEscalaFrontal, _crearLlaveEntrada, _crearLlaveSalida se mantienen igual)
+
   _crearEscalaFrontal() {
     const zFrente = 1.02; 
     const linea = new THREE.Line(
@@ -70,20 +70,15 @@ export class Tanque {
     );
     this.group.add(linea);
 
-    // Marcas y Números
     for (let i = 1; i <= 10; i++) {
         const y = i * 0.1;
-        const esMetro = i % 10 === 0;
         const esMedio = i % 5 === 0;
-
         const taco = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.015, 0.015), new THREE.MeshBasicMaterial({ color: esMedio ? 0xff0000 : 0xffffff }));
         taco.position.set(-0.05, y, zFrente); 
         this.group.add(taco);
-
-        // Números en los medios metros (0.5m, 1.0m)
         if (esMedio) {
             const etiqueta = crearEtiqueta3D(`${y.toFixed(1)} m`, 'rgba(0,0,0,0.8)');
-            etiqueta.sprite.scale.set(0.4, 0.1, 1); // Tamaño de letra
+            etiqueta.sprite.scale.set(0.4, 0.1, 1); 
             etiqueta.sprite.position.set(-0.3, y, zFrente);
             this.group.add(etiqueta.sprite);
         }
@@ -129,7 +124,6 @@ export class Tanque {
 
   actualizarPosicionManometros() {
     const xManometro = -(this.radio + 0.4); 
-    
     this.manometroFondo.group.position.set(xManometro, 0.1, 0);
     this.manometroMedio.group.position.set(xManometro, 0.5, 0);
     this.manometroSup.group.position.set(xManometro, 0.9, 0);
@@ -192,32 +186,7 @@ export class Tanque {
     this.chorroMat.color.setHex(color);
   }
 
-  // --- CONSERVACIÓN DE VOLUMEN ---
-
-  /**
-   * Área de la base del tanque (cilindro): A = π·r²
-   */
-  getAreaBase() {
-    return Math.PI * this.radio * this.radio;
-  }
-
-  /**
-   * Volumen actual de agua en el tanque: V = A·h
-   */
-  getVolumen() {
-    return this.getAreaBase() * this.alturaActual;
-  }
-
-  /**
-   * Establece el volumen de agua y calcula la altura correspondiente.
-   * Se clampea al rango [0.01, alturaMaxima].
-   */
-  setVolumen(v) {
-    const h = v / this.getAreaBase();
-    this.alturaActual = Math.min(Math.max(h, 0.01), this.alturaMaxima);
-    this.actualizarGeometria();
-  }
-
+  // --- MÉTODO CLAVE: Actualización de manómetros ---
   update() {
     if (this.llaveEntradaAbierta && this.alturaActual < this.alturaMaxima) {
         this.setNivel(this.alturaActual + 0.01); 
@@ -225,5 +194,35 @@ export class Tanque {
     if (this.chorro.visible) {
         this.chorro.material.opacity = 0.7 + 0.3 * Math.sin(Date.now() * 0.02);
     }
+
+    // --- LÓGICA DE MANÓMETROS (Faltaba) ---
+    // Como el tanque no sabe la densidad (rho), usamos 1000 por defecto (Agua).
+    // Si quieres que cambie, pásale la rho desde el Banco.
+    const rho = 1000;
+    const g = 9.8;
+    const Patm = 101.3;
+    
+    // Presión = P_atm + rho * g * h / 1000 (en kPa)
+    const pFondo = Patm + (rho * g * this.alturaActual) / 1000;
+    const pMedio = Patm + (rho * g * Math.max(this.alturaActual - 0.5, 0)) / 1000;
+    const pSup = Patm + (rho * g * Math.max(this.alturaActual - 0.9, 0)) / 1000;
+
+    this.manometroFondo.setValor(pFondo, 100, 120);
+    this.manometroMedio.setValor(pMedio, 100, 120);
+    this.manometroSup.setValor(pSup, 100, 120);
+  }
+
+  getAreaBase() {
+    return Math.PI * this.radio * this.radio;
+  }
+
+  getVolumen() {
+    return this.getAreaBase() * this.alturaActual;
+  }
+
+  setVolumen(v) {
+    const h = v / this.getAreaBase();
+    this.alturaActual = Math.min(Math.max(h, 0.01), this.alturaMaxima);
+    this.actualizarGeometria();
   }
 }

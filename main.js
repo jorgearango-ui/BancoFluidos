@@ -25,7 +25,7 @@ renderer.xr.enabled = true;
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
 document.body.appendChild(renderer.domElement);
 
-// --- BOTÓN HÍBRIDO: AR si está disponible, si no VR ---
+// --- BOTÓN DE AR/VR ---
 let xrButton;
 const arSupported = navigator.xr && navigator.xr.isSessionSupported;
 
@@ -52,6 +52,31 @@ if (arSupported) {
   xrButton = VRButton.createButton(renderer);
   document.body.appendChild(xrButton);
 }
+
+// --- BOTÓN DE SONIDO HTML (Para pantalla plana) ---
+const btnSonido = document.createElement('button');
+btnSonido.textContent = '🔊 ACTIVAR SONIDO';
+btnSonido.style.position = 'absolute';
+btnSonido.style.top = '20px';
+btnSonido.style.right = '20px';
+btnSonido.style.padding = '10px 20px';
+btnSonido.style.fontSize = '16px';
+btnSonido.style.background = '#aa00ff';
+btnSonido.style.color = 'white';
+btnSonido.style.border = 'none';
+btnSonido.style.borderRadius = '8px';
+btnSonido.style.cursor = 'pointer';
+btnSonido.style.zIndex = '1000';
+document.body.appendChild(btnSonido);
+
+btnSonido.addEventListener('click', () => {
+  if (listener.context.state === 'suspended') {
+    listener.context.resume().then(() => {
+      alert('¡Sonido activado!');
+      btnSonido.style.display = 'none';
+    });
+  }
+});
 
 const controls = new OrbitControls(camera, renderer.domElement);
 controls.target.set(0, 1, -1.5);
@@ -81,16 +106,18 @@ const dir = new THREE.DirectionalLight(0xffffff, 2.0);
 dir.position.set(10, 15, 10);
 scene.add(dir);
 
-// --- BANCO DE FLUIDOS (Escala 0.86 = 20% más grande que 0.8) ---
+// --- BANCO DE FLUIDOS ---
 const banco = new Banco();
 banco.group.scale.set(0.5, 0.5, 0.5); 
 banco.group.position.set(1.5, -1.0, -1.5); 
 scene.add(banco.group);
 
-// --- TABLERO DE CONTROL (Escala proporcional al banco) ---
+// --- TABLERO DE CONTROL ---
 const tablero = new TableroVR(banco);
-tablero.group.scale.set(1.3, 1.3, 1.3);
-tablero.group.position.set(1.5, 1, -1.0);
+// Reducción del 20%: 1.17 * 0.8 = 0.936
+tablero.group.scale.set(0.936, 0.936, 0.936);
+// Bajado 20 cm: Y = 1.0
+tablero.group.position.set(0.5, 1.0, -1.0);
 scene.add(tablero.group);
 
 // --- SONIDO SINTÉTICO ---
@@ -109,14 +136,11 @@ function crearRuidoBlanco() {
 const fuenteBomba = ctx.createBufferSource();
 fuenteBomba.buffer = crearRuidoBlanco();
 fuenteBomba.loop = true;
-
 const filtroBomba = ctx.createBiquadFilter();
 filtroBomba.type = 'lowpass';
 filtroBomba.frequency.value = 150;
-
 const gananciaBomba = ctx.createGain();
 gananciaBomba.gain.value = 0;
-
 fuenteBomba.connect(filtroBomba);
 filtroBomba.connect(gananciaBomba);
 gananciaBomba.connect(ctx.destination);
@@ -125,15 +149,12 @@ fuenteBomba.start();
 const fuenteAgua = ctx.createBufferSource();
 fuenteAgua.buffer = crearRuidoBlanco();
 fuenteAgua.loop = true;
-
 const filtroAgua = ctx.createBiquadFilter();
 filtroAgua.type = 'bandpass';
 filtroAgua.frequency.value = 1000;
 filtroAgua.Q.value = 0.5;
-
 const gananciaAgua = ctx.createGain();
 gananciaAgua.gain.value = 0;
-
 fuenteAgua.connect(filtroAgua);
 filtroAgua.connect(gananciaAgua);
 gananciaAgua.connect(ctx.destination);
@@ -145,7 +166,6 @@ banco.gananciaAgua = gananciaAgua;
 // --- CONTROLADORES VR/AR ---
 const controller1 = renderer.xr.getController(0);
 scene.add(controller1);
-
 const controller2 = renderer.xr.getController(1);
 scene.add(controller2);
 
@@ -168,6 +188,11 @@ function onSelectStart(event) {
 
   raycaster.ray.origin.setFromMatrixPosition(controller.matrixWorld);
   raycaster.ray.direction.set(0, 0, -1).applyMatrix4(tempMatrix);
+
+  // Si el usuario apunta al botón de sonido, lo desbloqueamos
+  if (listener.context.state === 'suspended') {
+    listener.context.resume();
+  }
 
   const colision = tablero.verificarColision(raycaster);
   
