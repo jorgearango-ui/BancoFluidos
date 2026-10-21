@@ -115,7 +115,7 @@ export class Banco {
 
     // El repositorio inicia al 80% para no verse tan lleno
     const volMaxBomba = this.bomba.getAreaBase() * this.bomba.alturaMaxima;
-    this.bomba.setVolumen(volMaxBomba * 0.8); 
+    this.bomba.setVolumen(volMaxBomba * 0.64); 
     this.tanque.setVolumen(0.01);
     this.descarga.setVolumen(0);
     this.tuberia.setFlujoActivo(false);
