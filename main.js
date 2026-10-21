@@ -53,7 +53,7 @@ if (arSupported) {
   document.body.appendChild(xrButton);
 }
 
-// --- BOTÓN DE SONIDO HTML (Para pantalla plana) ---
+// --- BOTÓN DE SONIDO HTML ---
 const btnSonido = document.createElement('button');
 btnSonido.textContent = '🔊 ACTIVAR SONIDO';
 btnSonido.style.position = 'absolute';
@@ -114,153 +114,15 @@ scene.add(banco.group);
 
 // --- TABLERO DE CONTROL ---
 const tablero = new TableroVR(banco);
-// Reducción del 20%: 1.17 * 0.8 = 0.936
 tablero.group.scale.set(0.936, 0.936, 0.936);
-// Bajado 20 cm: Y = 1.0
-tablero.group.position.set(0.5, 1.0, -1.0);
+
+// ¡AQUÍ ESTÁ EL TRUCO! Calculamos la posición exacta sobre la descarga.
+// La descarga está en el banco en Y=1.5 (escala 0.5 => Y=0.75 real). 
+// Su altura máxima es 0.5 (escala 0.5 => 0.25 real). 
+// La suma es 1.0 real. Le sumamos 0.05 para los 5 cm.
+// Nota: Las coordenadas son relativas al grupo del banco, no a la escena.
+// Si el tablero está fuera del grupo del banco, calculamos la posición global:
+const alturaDescargaGlobal = (1.5 + 0.5) * 0.5 + 0.05; // 1.05
+tablero.group.position.set(1.5, alturaDescargaGlobal + 0.5, -1.0); 
+// El +0.5 en Y es un ajuste visual para que flote sobre el banco (ajústalo si es necesario)
 scene.add(tablero.group);
-
-// --- SONIDO SINTÉTICO ---
-const ctx = listener.context;
-
-function crearRuidoBlanco() {
-  const bufferSize = ctx.sampleRate * 2;
-  const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
-  const data = buffer.getChannelData(0);
-  for (let i = 0; i < bufferSize; i++) {
-    data[i] = Math.random() * 2 - 1;
-  }
-  return buffer;
-}
-
-const fuenteBomba = ctx.createBufferSource();
-fuenteBomba.buffer = crearRuidoBlanco();
-fuenteBomba.loop = true;
-const filtroBomba = ctx.createBiquadFilter();
-filtroBomba.type = 'lowpass';
-filtroBomba.frequency.value = 150;
-const gananciaBomba = ctx.createGain();
-gananciaBomba.gain.value = 0;
-fuenteBomba.connect(filtroBomba);
-filtroBomba.connect(gananciaBomba);
-gananciaBomba.connect(ctx.destination);
-fuenteBomba.start();
-
-const fuenteAgua = ctx.createBufferSource();
-fuenteAgua.buffer = crearRuidoBlanco();
-fuenteAgua.loop = true;
-const filtroAgua = ctx.createBiquadFilter();
-filtroAgua.type = 'bandpass';
-filtroAgua.frequency.value = 1000;
-filtroAgua.Q.value = 0.5;
-const gananciaAgua = ctx.createGain();
-gananciaAgua.gain.value = 0;
-fuenteAgua.connect(filtroAgua);
-filtroAgua.connect(gananciaAgua);
-gananciaAgua.connect(ctx.destination);
-fuenteAgua.start();
-
-banco.gananciaBomba = gananciaBomba;
-banco.gananciaAgua = gananciaAgua;
-
-// --- CONTROLADORES VR/AR ---
-const controller1 = renderer.xr.getController(0);
-scene.add(controller1);
-const controller2 = renderer.xr.getController(1);
-scene.add(controller2);
-
-const geometryLaser = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0, 0, 0), new THREE.Vector3(0, 0, -1)]);
-const materialLaser = new THREE.LineBasicMaterial({ color: 0xff0000 });
-const laser1 = new THREE.Line(geometryLaser, materialLaser);
-laser1.scale.z = 5; 
-controller1.add(laser1);
-
-const laser2 = new THREE.Line(geometryLaser, materialLaser.clone());
-laser2.scale.z = 5;
-controller2.add(laser2);
-
-const raycaster = new THREE.Raycaster();
-
-function onSelectStart(event) {
-  const controller = event.target;
-  const tempMatrix = new THREE.Matrix4();
-  tempMatrix.identity().extractRotation(controller.matrixWorld);
-
-  raycaster.ray.origin.setFromMatrixPosition(controller.matrixWorld);
-  raycaster.ray.direction.set(0, 0, -1).applyMatrix4(tempMatrix);
-
-  // Si el usuario apunta al botón de sonido, lo desbloqueamos
-  if (listener.context.state === 'suspended') {
-    listener.context.resume();
-  }
-
-  const colision = tablero.verificarColision(raycaster);
-  
-  if (colision && colision.tipo === 'boton') {
-    tablero.presionarBoton(colision.objeto);
-  } else if (colision && colision.tipo === 'slider') {
-    colision.objeto.userData.arrastrando = true;
-  }
-}
-
-function onSelectEnd(event) {
-  tablero.sliders.forEach(s => s.userData.arrastrando = false);
-}
-
-controller1.addEventListener('selectstart', onSelectStart);
-controller1.addEventListener('selectend', onSelectEnd);
-controller2.addEventListener('selectstart', onSelectStart);
-controller2.addEventListener('selectend', onSelectEnd);
-
-function moverSliders(controller) {
-  const tempMatrix = new THREE.Matrix4();
-  tempMatrix.identity().extractRotation(controller.matrixWorld);
-
-  raycaster.ray.origin.setFromMatrixPosition(controller.matrixWorld);
-  raycaster.ray.direction.set(0, 0, -1).applyMatrix4(tempMatrix);
-
-  const colision = tablero.verificarColision(raycaster);
-  
-  if (colision && colision.tipo === 'slider') {
-    const perilla = colision.objeto;
-    const interseccion = raycaster.intersectObject(perilla)[0];
-    if (interseccion) {
-      const escalaTablero = tablero.group.scale.x; 
-      let xLocal = (interseccion.point.x - tablero.group.position.x) / escalaTablero;
-      
-      let minX = perilla.userData.posX;
-      let maxX = perilla.userData.posX + perilla.userData.ancho;
-      
-      xLocal = Math.max(minX, Math.min(maxX, xLocal));
-      perilla.position.x = xLocal;
-
-      const pct = (xLocal - minX) / perilla.userData.ancho;
-      const valor = perilla.userData.min + (perilla.userData.max - perilla.userData.min) * pct;
-      
-      perilla.userData.callback(valor);
-      tablero.actualizarValorSlider(perilla, valor);
-    }
-  }
-}
-
-const clock = new THREE.Clock();
-
-renderer.setAnimationLoop(() => {
-  const dt = clock.getDelta();
-  
-  if (renderer.xr.isPresenting) {
-    moverSliders(controller1);
-    moverSliders(controller2);
-  } else {
-    controls.update();
-  }
-
-  banco.update(dt);
-  renderer.render(scene, camera);
-});
-
-window.addEventListener('resize', () => {
-  camera.aspect = innerWidth / innerHeight;
-  camera.updateProjectionMatrix();
-  renderer.setSize(innerWidth, innerHeight);
-});
