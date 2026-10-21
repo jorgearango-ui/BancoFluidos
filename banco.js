@@ -10,14 +10,14 @@ export class Banco {
     this.group = new THREE.Group();
     this.rho = 1000;
     this.g = 9.8;
-    this.P_atm = 101.325; 
+    this.P_atm = 101.325;
 
-    this.tanque = new Tanque(); 
-    this.tuberia = new Tuberia(); 
-    this.descarga = new Descarga(); 
+    this.tanque = new Tanque();
+    this.tuberia = new Tuberia();
+    this.descarga = new Descarga();
     this.bomba = new Bomba();
 
-    this.tanque.group.position.set(-3.0, 1.5, 0); 
+    this.tanque.group.position.set(-3.0, 1.5, 0);
     this.bomba.group.position.set(-3.0, 0, 0);
     this.descarga.group.position.set(-1.0, 1.5, 0);
     this.tuberia.group.position.set(-0.5, 1.2, 0);
@@ -29,9 +29,9 @@ export class Banco {
     this.umbralDescarga = 0.08;
     this.umbralTanque = 0.1;
 
-    this.radioTuboDescarga = 0.05;    
-    this.vVenturi = 2.0;              
-    this.factorEscalaChorro = 0.08;   
+    this.radioTuboDescarga = 0.05;
+    this.vVenturi = 2.0;
+    this.factorEscalaChorro = 0.08;
 
     this.vector = new VectorAgua();
     this.group.add(this.vector.group);
@@ -53,8 +53,8 @@ export class Banco {
     this.fluidoMat = new THREE.MeshStandardMaterial({ color: 0x0077ff, transparent: true, opacity: 0.8 });
 
     this.curvaManguera1 = new THREE.CatmullRomCurve3([
-      new THREE.Vector3(-2.4, 1.6, 0),  
-      new THREE.Vector3(-1.5, 1.6, 0)  
+      new THREE.Vector3(-2.4, 1.6, 0),
+      new THREE.Vector3(-1.5, 1.6, 0)
     ]);
     this.manguera1 = new THREE.Mesh(new THREE.TubeGeometry(this.curvaManguera1, 20, 0.04, 8, false), tuboMat);
     this.fluidoManguera1 = new THREE.Mesh(new THREE.TubeGeometry(this.curvaManguera1, 20, 0.03, 8, false), this.fluidoMat);
@@ -75,10 +75,10 @@ export class Banco {
     this.group.add(this.manguera2, this.fluidoManguera2);
 
     const puntos3 = [
-      new THREE.Vector3(-1.0, 1.20, 0),   
-      new THREE.Vector3(-1.3, 1.20, 0),   
-      new THREE.Vector3(-1.3, 1.05, 0),   
-      new THREE.Vector3(-1.7, 1.05, 0)    
+      new THREE.Vector3(-1.0, 1.20, 0),
+      new THREE.Vector3(-1.3, 1.20, 0),
+      new THREE.Vector3(-1.3, 1.05, 0),
+      new THREE.Vector3(-1.7, 1.05, 0)
     ];
     const curva3 = new THREE.CatmullRomCurve3(puntos3, false, 'catmullrom', 0.0);
     this.curvaSalidaVenturi = curva3;
@@ -87,8 +87,8 @@ export class Banco {
     this.fluidoManguera3.visible = false;
     this.group.add(this.manguera3, this.fluidoManguera3);
 
-    this.chorroReservorioMat = new THREE.MeshStandardMaterial({ 
-      color: 0x0077ff, transparent: true, opacity: 0.85, depthWrite: true 
+    this.chorroReservorioMat = new THREE.MeshStandardMaterial({
+      color: 0x0077ff, transparent: true, opacity: 0.85, depthWrite: true
     });
     this.chorroReservorio = new THREE.Mesh(new THREE.BufferGeometry(), this.chorroReservorioMat);
     this.chorroReservorio.visible = false;
@@ -100,8 +100,8 @@ export class Banco {
   _actualizarManguera() {
     const salidaX = -3.0 + this.tanque.radio;
     const puntos = [
-      new THREE.Vector3(salidaX, 1.6, 0),  
-      new THREE.Vector3(-1.5, 1.6, 0)  
+      new THREE.Vector3(salidaX, 1.6, 0),
+      new THREE.Vector3(-1.5, 1.6, 0)
     ];
     this.curvaManguera1.points = puntos;
     this.manguera1.geometry.dispose();
@@ -113,9 +113,9 @@ export class Banco {
   _reset() {
     this.pausarVector = false;
 
-    // El repositorio inicia al 80% para no verse tan lleno
+    // Reservorio inicia al 64 % (80 % original − 20 %) para que la parábola sea más larga
     const volMaxBomba = this.bomba.getAreaBase() * this.bomba.alturaMaxima;
-    this.bomba.setVolumen(volMaxBomba * 0.64); 
+    this.bomba.setVolumen(volMaxBomba * 0.64);
     this.tanque.setVolumen(0.01);
     this.descarga.setVolumen(0);
     this.tuberia.setFlujoActivo(false);
@@ -159,10 +159,10 @@ export class Banco {
   _calcularVelocidadSalida() {
     const areaVenturi = Math.PI * this.tuberia.radioAncho * this.tuberia.radioAncho;
     const areaTubo = Math.PI * this.radioTuboDescarga * this.radioTuboDescarga;
-    
+
     const factorPotencia = this.potenciaBombaWatts / 1000;
     const factorDensidad = 1000 / this.rho;
-    
+
     return (areaVenturi / areaTubo) * this.vVenturi * factorDensidad * factorPotencia;
   }
 
@@ -184,7 +184,7 @@ export class Banco {
     const tCaida = Math.sqrt((2 * dy) / g);
     const N = 30;
     const puntos = [];
-    
+
     for (let i = 0; i <= N; i++) {
       const t = (i / N) * tCaida;
       const x = p0.x - vx * t;
@@ -251,7 +251,7 @@ export class Banco {
       ctx.fillStyle = '#000';
       ctx.font = 'bold 16px Arial';
       ctx.fillText(titulo, ox + w / 2, oy - h - 25);
-      
+
       ctx.font = '14px Arial';
       ctx.fillText(tituloX, ox + w / 2, oy + 40);
 
@@ -277,7 +277,7 @@ export class Banco {
 
     const g1_x = 80, g1_y = 250, g1_w = 650, g1_h = 180;
     dibujarEjes(g1_x, g1_y, g1_w, g1_h, maxX, maxY, 'X (m)', 'Y (m)', 'Trayectoria (Y vs X)', null, null);
-    
+
     ctx.strokeStyle = '#0077ff';
     ctx.lineWidth = 3;
     ctx.beginPath();
@@ -291,7 +291,7 @@ export class Banco {
 
     const g2_x = 80, g2_y = 550, g2_w = 650, g2_h = 180;
     dibujarEjes(g2_x, g2_y, g2_w, g2_h, maxT, Math.max(maxX, maxY), 'Tiempo (s)', 'Posición (m)', 'Posición vs Tiempo', '#00aa00', '#0077ff');
-    
+
     ctx.strokeStyle = '#00aa00';
     ctx.beginPath();
     datos.forEach((d, i) => {
@@ -314,7 +314,7 @@ export class Banco {
 
     const g3_x = 80, g3_y = 850, g3_w = 650, g3_h = 180;
     dibujarEjes(g3_x, g3_y, g3_w, g3_h, maxT, maxV, 'Tiempo (s)', 'Velocidad (m/s)', 'Velocidad vs Tiempo', '#ff8800', '#0077ff');
-    
+
     ctx.strokeStyle = '#00aa00';
     ctx.beginPath();
     datos.forEach((d, i) => {
@@ -361,7 +361,7 @@ export class Banco {
     const factorDensidad = 1000 / densidadFluido;
     const factorPotencia = this.potenciaBombaWatts / 1000;
     const v1_efectiva = 2.0 * factorDensidad * factorPotencia;
-    
+
     const secciones = [];
 
     secciones.push(new Paragraph({
@@ -494,7 +494,7 @@ export class Banco {
         children: [
           new ImageRun({
             data: imgBase64,
-            transformation: { width: 600, height: 750 }, 
+            transformation: { width: 600, height: 750 },
             type: "png"
           })
         ],
@@ -603,7 +603,7 @@ export class Banco {
     this.fluidoManguera2.visible = this.descarga.valvulaAbierta;
     this.tuberia.setFlujoActivo(this.descarga.valvulaAbierta);
     this.fluidoManguera3.visible = this.descarga.valvulaAbierta;
-    
+
     if (this.gananciaAgua) {
       const t = this.gananciaAgua.context.currentTime;
       this.gananciaAgua.gain.setTargetAtTime(this.descarga.valvulaAbierta ? 0.4 : 0.0, t, 0.5);
@@ -617,14 +617,14 @@ export class Banco {
   setFluidoVR(rho) {
     this.rho = rho;
     const color = rho === 1000 ? 0x0077ff : rho === 1420 ? 0xcc8800 : rho === 680 ? 0x88aa00 : 0x99ccff;
-    
+
     this.tanque.setColorFluido(color);
     this.tuberia.setColorFluido(color);
     this.descarga.setColorFluido(color);
     this.bomba.setColorFluido(color);
     this.fluidoMat.color.setHex(color);
     this.chorroReservorioMat.color.setHex(color);
-    
+
     this.fluidoNombre = rho === 1000 ? 'Agua' : rho === 1420 ? 'Miel' : rho === 680 ? 'Gasolina' : 'Glicerina';
     this.tuberia.rho = this.rho;
     this.tuberia.actualizarFisica();
@@ -642,8 +642,8 @@ export class Banco {
   setRadioTanqueVR(val) {
     this.tanque.setRadio(val);
     this._actualizarManguera();
-    const volTanqueActual = this.tanque.getVolumen(); 
-    this.tanque.setVolumen(volTanqueActual); 
+    const volTanqueActual = this.tanque.getVolumen();
+    this.tanque.setVolumen(volTanqueActual);
     this._actualizar();
   }
 
@@ -660,11 +660,16 @@ export class Banco {
   update(dt = 0.016) {
     const CAUDAL = 0.002 * (this.potenciaBombaWatts / 1000);
 
+    // --- Transferencia 1: Reservorio → Tanque principal ---
+    // Caudal subido a 0.02 para que el efecto sea visible y realista.
+    // Al quitar el auto-llenado de Tanque.update(), esta es la ÚNICA vía
+    // por la que el tanque principal recibe agua, garantizando conservación de volumen.
     if (this.tanque.llaveEntradaAbierta && this.bomba.encendida) {
       const volRes = this.bomba.getVolumen();
       const volTanque = this.tanque.getVolumen();
       const volTanqueMax = this.tanque.getAreaBase() * this.tanque.alturaMaxima;
-      const transferir = Math.min(0.006 * (this.potenciaBombaWatts / 1000), volRes, volTanqueMax - volTanque);
+      const caudalBomba = 0.02 * (this.potenciaBombaWatts / 1000);
+      const transferir = Math.min(caudalBomba, volRes, volTanqueMax - volTanque);
       if (transferir > 0) {
         this.bomba.setVolumen(volRes - transferir);
         this.tanque.setVolumen(volTanque + transferir);
@@ -672,6 +677,7 @@ export class Banco {
       }
     }
 
+    // --- Transferencia 2: Tanque principal → Tanque dos (descarga) ---
     if (this.tanque.llaveSalidaAbierta && this.tanque.alturaActual > this.umbralTanque) {
       const volTanque = this.tanque.getVolumen();
       const volDesc = this.descarga.getVolumen();
@@ -684,6 +690,7 @@ export class Banco {
       }
     }
 
+    // --- Transferencia 3: Tanque dos → Reservorio ---
     if (this.descarga.valvulaAbierta && this.descarga.alturaActual > this.umbralDescarga) {
       const volDesc = this.descarga.getVolumen();
       const volRes = this.bomba.getVolumen();
@@ -712,7 +719,7 @@ export class Banco {
       this.chorroReservorio.material.opacity = 0.7 + 0.3 * Math.sin(Date.now() * 0.02);
     }
 
-    this.tuberia.animarLlenado(); 
+    this.tuberia.animarLlenado();
     this.cicloActivo = this.descarga.valvulaAbierta || this.bomba.encendida;
 
     if (!this.pausarVector) {
@@ -720,7 +727,7 @@ export class Banco {
     }
 
     this._actualizarBloqueos();
-    this.tanque.update(); // ACTUALIZA LOS MANÓMETROS
+    this.tanque.update(); // ACTUALIZA LOS MANÓMETROS (ya no modifica el nivel)
     this.bomba.update();
   }
 }
