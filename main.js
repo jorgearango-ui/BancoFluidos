@@ -10,7 +10,7 @@ scene.background = null;
 scene.fog = null;
 
 const camera = new THREE.PerspectiveCamera(60, innerWidth / innerHeight, 0.1, 100);
-camera.position.set(0, 1.6, 2); // Posición inicial de la cámara más atrás
+camera.position.set(0, 1.6, 0); 
 
 const listener = new THREE.AudioListener();
 camera.add(listener);
@@ -53,15 +53,33 @@ if (arSupported) {
   document.body.appendChild(xrButton);
 }
 
-// --- DESBLOQUEO DE AUDIO AL HACER CLIC EN CUALQUIER PARTE ---
-document.body.addEventListener('click', () => {
+// --- BOTÓN DE ACTIVAR SONIDO (Restaurado) ---
+const btnSonido = document.createElement('button');
+btnSonido.textContent = '🔊 ACTIVAR SONIDO';
+btnSonido.style.position = 'absolute';
+btnSonido.style.top = '20px';
+btnSonido.style.right = '20px';
+btnSonido.style.padding = '10px 20px';
+btnSonido.style.fontSize = '16px';
+btnSonido.style.background = '#aa00ff';
+btnSonido.style.color = 'white';
+btnSonido.style.border = 'none';
+btnSonido.style.borderRadius = '8px';
+btnSonido.style.cursor = 'pointer';
+btnSonido.style.zIndex = '1000';
+document.body.appendChild(btnSonido);
+
+btnSonido.addEventListener('click', () => {
   if (listener.context.state === 'suspended') {
-    listener.context.resume();
+    listener.context.resume().then(() => {
+      alert('¡Sonido activado!');
+      btnSonido.style.display = 'none';
+    });
   }
-}, { once: true });
+});
 
 const controls = new OrbitControls(camera, renderer.domElement);
-controls.target.set(0, 0.5, -1.5); // Apuntamos al centro del banco
+controls.target.set(0, 0.5, -1.5);
 controls.enableDamping = true;
 controls.dampingFactor = 0.05;
 
@@ -90,17 +108,21 @@ scene.add(dir);
 
 // --- BANCO DE FLUIDOS ---
 const banco = new Banco();
-// Escala: 0.5 lo reduce a la mitad para que quepa en el campo de visión
 banco.group.scale.set(0.5, 0.5, 0.5); 
-// Posición CENTRADA y hacia el frente
-banco.group.position.set(0, -0.5, -1.5); 
+// Lo bajamos a Y = -0.8 para que quede a la altura de los ojos (1.6) pero un poco más abajo
+banco.group.position.set(0, -0.8, -1.5); 
 scene.add(banco.group);
 
-// --- TABLERO DE CONTROL ---
+// --- TABLERO DE CONTROL (5 cm sobre la descarga) ---
 const tablero = new TableroVR(banco);
 tablero.group.scale.set(0.936, 0.936, 0.936);
-// Ubicación: 5 cm sobre la descarga, alineado con el banco
-tablero.group.position.set(0.5, 0.55, -1.0);
+
+// Cálculo de la altura de la descarga en coordenadas globales:
+// Descarga local Y = 1.5, su altura máxima es 0.5. Escala del banco = 0.5.
+// Altura global de la descarga = (1.5 + 0.5) * 0.5 = 1.0.
+// Le sumamos 5 cm (0.05) = 1.05. 
+// Como el banco está en Y = -0.8, la altura final es 1.05 - 0.8 = 0.25.
+tablero.group.position.set(0, 0.35, -1.0);
 scene.add(tablero.group);
 
 // --- SONIDO SINTÉTICO ---
