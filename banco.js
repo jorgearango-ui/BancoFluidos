@@ -113,10 +113,9 @@ export class Banco {
   _reset() {
     this.pausarVector = false;
 
-    // Aseguramos que el repositorio empiece con un 80% de su capacidad máxima
-    // y no al 100% (que es lo que lo hacía ver muy lleno).
+    // El repositorio inicia al 80% para no verse tan lleno
     const volMaxBomba = this.bomba.getAreaBase() * this.bomba.alturaMaxima;
-    this.bomba.setVolumen(volMaxBomba * 0.8); // 80% inicial
+    this.bomba.setVolumen(volMaxBomba * 0.8); 
     this.tanque.setVolumen(0.01);
     this.descarga.setVolumen(0);
     this.tuberia.setFlujoActivo(false);
@@ -156,8 +155,6 @@ export class Banco {
     const h = this.tanque.alturaActual;
     this.pFondo = this.P_atm + (this.rho * this.g * h) / 1000;
   }
-
-  // ... (El resto del código de banco.js sigue igual: _calcularVelocidadSalida, _actualizarChorroParabolico, _generarGraficaParabola, _generarInforme, y los métodos para el tablero VR) ...
 
   _calcularVelocidadSalida() {
     const areaVenturi = Math.PI * this.tuberia.radioAncho * this.tuberia.radioAncho;
@@ -206,150 +203,17 @@ export class Banco {
     }
   }
 
-  _generarGraficaParabola() { /* ... igual ... */ }
+  _generarGraficaParabola() {
+    const datos = this.vector.datosParabola || [];
+    if (datos.length < 10) return null;
 
-  _generarInforme() { /* ... igual ... */ }
+    const canvas = document.createElement('canvas');
+    canvas.width = 800;
+    canvas.height = 1000;
+    const ctx = canvas.getContext('2d');
 
-  toggleBombaVR() {
-    this.bomba.toggleBomba();
-    if (this.gananciaBomba) {
-      const t = this.gananciaBomba.context.currentTime;
-      this.gananciaBomba.gain.setTargetAtTime(this.bomba.encendida ? 0.15 : 0.0, t, 0.5);
-    }
-  }
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-  toggleLlaveEntradaVR() {
-    this.tanque.toggleLlaveEntrada();
-  }
-
-  toggleLlaveSalidaVR() {
-    this.tanque.toggleLlaveSalida();
-    this.fluidoManguera1.visible = this.tanque.llaveSalidaAbierta;
-  }
-
-  toggleValvulaDescargaVR() {
-    this.descarga.toggleValvula();
-    this.fluidoManguera2.visible = this.descarga.valvulaAbierta;
-    this.tuberia.setFlujoActivo(this.descarga.valvulaAbierta);
-    this.fluidoManguera3.visible = this.descarga.valvulaAbierta;
-    
-    if (this.gananciaAgua) {
-      const t = this.gananciaAgua.context.currentTime;
-      this.gananciaAgua.gain.setTargetAtTime(this.descarga.valvulaAbierta ? 0.4 : 0.0, t, 0.5);
-    }
-  }
-
-  resetVR() {
-    this._reset();
-  }
-
-  setFluidoVR(rho) {
-    this.rho = rho;
-    const color = rho === 1000 ? 0x0077ff : rho === 1420 ? 0xcc8800 : rho === 680 ? 0x88aa00 : 0x99ccff;
-    
-    this.tanque.setColorFluido(color);
-    this.tuberia.setColorFluido(color);
-    this.descarga.setColorFluido(color);
-    this.bomba.setColorFluido(color);
-    this.fluidoMat.color.setHex(color);
-    this.chorroReservorioMat.color.setHex(color);
-    
-    this.fluidoNombre = rho === 1000 ? 'Agua' : rho === 1420 ? 'Miel' : rho === 680 ? 'Gasolina' : 'Glicerina';
-    this.tuberia.rho = this.rho;
-    this.tuberia.actualizarFisica();
-    this._actualizar();
-  }
-
-  pausarVectorVR() {
-    this.pausarVector = !this.pausarVector;
-  }
-
-  generarInformeVR() {
-    this._generarInforme();
-  }
-
-  setRadioTanqueVR(val) {
-    this.tanque.setRadio(val);
-    this._actualizarManguera();
-    const volTanqueActual = this.tanque.getVolumen(); 
-    this.tanque.setVolumen(volTanqueActual); 
-    this._actualizar();
-  }
-
-  setRadioVenturiVR(val) {
-    this.tuberia.setRadioGarganta(val);
-  }
-
-  setPotenciaVR(val) {
-    this.potenciaBombaWatts = val;
-    this.tuberia.v1 = 2.0 * (val / 1000);
-    this.tuberia.actualizarFisica();
-  }
-
-  update(dt = 0.016) {
-    const CAUDAL = 0.002 * (this.potenciaBombaWatts / 1000);
-
-    if (this.tanque.llaveEntradaAbierta && this.bomba.encendida) {
-      const volRes = this.bomba.getVolumen();
-      const volTanque = this.tanque.getVolumen();
-      const volTanqueMax = this.tanque.getAreaBase() * this.tanque.alturaMaxima;
-      const transferir = Math.min(0.006 * (this.potenciaBombaWatts / 1000), volRes, volTanqueMax - volTanque);
-      if (transferir > 0) {
-        this.bomba.setVolumen(volRes - transferir);
-        this.tanque.setVolumen(volTanque + transferir);
-        this._actualizar();
-      }
-    }
-
-    if (this.tanque.llaveSalidaAbierta && this.tanque.alturaActual > this.umbralTanque) {
-      const volTanque = this.tanque.getVolumen();
-      const volDesc = this.descarga.getVolumen();
-      const volDescMax = this.descarga._volumenHasta(this.descarga.alturaMaxima);
-      const transferir = Math.min(CAUDAL, volTanque, volDescMax - volDesc);
-      if (transferir > 0) {
-        this.tanque.setVolumen(volTanque - transferir);
-        this.descarga.setVolumen(volDesc + transferir);
-        this._actualizar();
-      }
-    }
-
-    if (this.descarga.valvulaAbierta && this.descarga.alturaActual > this.umbralDescarga) {
-      const volDesc = this.descarga.getVolumen();
-      const volRes = this.bomba.getVolumen();
-      const volResMax = this.bomba.getAreaBase() * this.bomba.alturaMaxima;
-      const transferir = Math.min(CAUDAL, volDesc, volResMax - volRes);
-      if (transferir > 0) {
-        this.descarga.setVolumen(volDesc - transferir);
-        this.bomba.setVolumen(volRes + transferir);
-      }
-    }
-
-    if (this.bomba.encendida) {
-      if (this.bomba.getVolumen() <= 0.0001) {
-        this.bomba.encendida = false;
-        this.bomba.fluidoManguera.visible = false;
-      }
-    }
-
-    if (this.descarga.valvulaAbierta) {
-      this._actualizarChorroParabolico();
-    } else {
-      this.chorroReservorio.visible = false;
-    }
-
-    if (this.chorroReservorio.visible) {
-      this.chorroReservorio.material.opacity = 0.7 + 0.3 * Math.sin(Date.now() * 0.02);
-    }
-
-    this.tuberia.animarLlenado(); 
-    this.cicloActivo = this.descarga.valvulaAbierta || this.bomba.encendida;
-
-    if (!this.pausarVector) {
-      this.vector.actualizar(dt, this);
-    }
-
-    this._actualizarBloqueos();
-    this.tanque.update(); // ¡ACTUALIZA MANÓMETROS!
-    this.bomba.update();
-  }
-}
+    const maxT = Math.max(...datos.map(d => d.t)) || 1;
+    const max

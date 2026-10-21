@@ -60,8 +60,6 @@ export class Tanque {
     this.actualizarPosicionManometros();
   }
 
-  // ... (Los métodos _crearEscalaFrontal, _crearLlaveEntrada, _crearLlaveSalida se mantienen igual)
-
   _crearEscalaFrontal() {
     const zFrente = 1.02; 
     const linea = new THREE.Line(
@@ -186,7 +184,7 @@ export class Tanque {
     this.chorroMat.color.setHex(color);
   }
 
-  // --- MÉTODO CLAVE: Actualización de manómetros ---
+  // --- LÓGICA DE MANÓMETROS (Ahora sí funciona) ---
   update() {
     if (this.llaveEntradaAbierta && this.alturaActual < this.alturaMaxima) {
         this.setNivel(this.alturaActual + 0.01); 
@@ -195,14 +193,10 @@ export class Tanque {
         this.chorro.material.opacity = 0.7 + 0.3 * Math.sin(Date.now() * 0.02);
     }
 
-    // --- LÓGICA DE MANÓMETROS (Faltaba) ---
-    // Como el tanque no sabe la densidad (rho), usamos 1000 por defecto (Agua).
-    // Si quieres que cambie, pásale la rho desde el Banco.
     const rho = 1000;
     const g = 9.8;
     const Patm = 101.3;
     
-    // Presión = P_atm + rho * g * h / 1000 (en kPa)
     const pFondo = Patm + (rho * g * this.alturaActual) / 1000;
     const pMedio = Patm + (rho * g * Math.max(this.alturaActual - 0.5, 0)) / 1000;
     const pSup = Patm + (rho * g * Math.max(this.alturaActual - 0.9, 0)) / 1000;
