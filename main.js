@@ -10,7 +10,7 @@ scene.background = null;
 scene.fog = null;
 
 const camera = new THREE.PerspectiveCamera(60, innerWidth / innerHeight, 0.1, 100);
-camera.position.set(0, 1.6, 0); 
+camera.position.set(0, 1.6, 2); // Posición inicial de la cámara más atrás
 
 const listener = new THREE.AudioListener();
 camera.add(listener);
@@ -53,33 +53,15 @@ if (arSupported) {
   document.body.appendChild(xrButton);
 }
 
-// --- BOTÓN DE SONIDO HTML ---
-const btnSonido = document.createElement('button');
-btnSonido.textContent = '🔊 ACTIVAR SONIDO';
-btnSonido.style.position = 'absolute';
-btnSonido.style.top = '20px';
-btnSonido.style.right = '20px';
-btnSonido.style.padding = '10px 20px';
-btnSonido.style.fontSize = '16px';
-btnSonido.style.background = '#aa00ff';
-btnSonido.style.color = 'white';
-btnSonido.style.border = 'none';
-btnSonido.style.borderRadius = '8px';
-btnSonido.style.cursor = 'pointer';
-btnSonido.style.zIndex = '1000';
-document.body.appendChild(btnSonido);
-
-btnSonido.addEventListener('click', () => {
+// --- DESBLOQUEO DE AUDIO AL HACER CLIC EN CUALQUIER PARTE ---
+document.body.addEventListener('click', () => {
   if (listener.context.state === 'suspended') {
-    listener.context.resume().then(() => {
-      alert('¡Sonido activado!');
-      btnSonido.style.display = 'none';
-    });
+    listener.context.resume();
   }
-});
+}, { once: true });
 
 const controls = new OrbitControls(camera, renderer.domElement);
-controls.target.set(0, 1, -1.5);
+controls.target.set(0, 0.5, -1.5); // Apuntamos al centro del banco
 controls.enableDamping = true;
 controls.dampingFactor = 0.05;
 
@@ -108,15 +90,17 @@ scene.add(dir);
 
 // --- BANCO DE FLUIDOS ---
 const banco = new Banco();
+// Escala: 0.5 lo reduce a la mitad para que quepa en el campo de visión
 banco.group.scale.set(0.5, 0.5, 0.5); 
-banco.group.position.set(1.5, -1.0, -1.5); 
+// Posición CENTRADA y hacia el frente
+banco.group.position.set(0, -0.5, -1.5); 
 scene.add(banco.group);
 
 // --- TABLERO DE CONTROL ---
 const tablero = new TableroVR(banco);
 tablero.group.scale.set(0.936, 0.936, 0.936);
-// Ubicación: 5 cm sobre la descarga (calculado manualmente)
-tablero.group.position.set(1.5, 1.55, -1.0);
+// Ubicación: 5 cm sobre la descarga, alineado con el banco
+tablero.group.position.set(0.5, 0.55, -1.0);
 scene.add(tablero.group);
 
 // --- SONIDO SINTÉTICO ---

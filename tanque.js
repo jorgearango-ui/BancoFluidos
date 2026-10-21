@@ -184,7 +184,6 @@ export class Tanque {
     this.chorroMat.color.setHex(color);
   }
 
-  // --- LÓGICA DE MANÓMETROS (Ahora sí funciona) ---
   update() {
     if (this.llaveEntradaAbierta && this.alturaActual < this.alturaMaxima) {
         this.setNivel(this.alturaActual + 0.01); 
