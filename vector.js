@@ -267,12 +267,12 @@ export class VectorAgua {
       if (this.progresoFase >= 1.0) {
         this.fase = 7; 
         this.progresoFase = 0;
-        this.yInicioCaida = 1.05; 
+        this.yInicioCaida = 1.20; 
         this.datosParabola = []; 
       } else {
         const pts = [
-          new THREE.Vector3(-1.0, 1.20, 0), new THREE.Vector3(-1.3, 1.20, 0),
-          new THREE.Vector3(-1.3, 1.05, 0), new THREE.Vector3(-1.7, 1.05, 0)
+          new THREE.Vector3(-1.0, 1.20, 0), 
+          new THREE.Vector3(-1.7, 1.20, 0)
         ];
         const curva = new THREE.CatmullRomCurve3(pts, false, 'catmullrom', 0.0);
         curva.getPoint(this.progresoFase, this.posicion);
@@ -287,7 +287,7 @@ export class VectorAgua {
       
       const alturaAguaRes = banco.bomba.nivelAgua;
       const yObjetivo = Math.min(alturaAguaRes, 1.0);
-      const p0 = new THREE.Vector3(-1.7, 1.05, 0);
+      const p0 = new THREE.Vector3(-1.7, 1.20, 0);
       const dy = p0.y - yObjetivo;
       const tCaidaTotal = dy > 0 ? Math.sqrt((2 * dy) / g) : 0.1;
 

@@ -76,9 +76,7 @@ export class Banco {
 
     const puntos3 = [
       new THREE.Vector3(-1.0, 1.20, 0),
-      new THREE.Vector3(-1.3, 1.20, 0),
-      new THREE.Vector3(-1.3, 1.05, 0),
-      new THREE.Vector3(-1.7, 1.05, 0)
+      new THREE.Vector3(-1.7, 1.20, 0)
     ];
     const curva3 = new THREE.CatmullRomCurve3(puntos3, false, 'catmullrom', 0.0);
     this.curvaSalidaVenturi = curva3;
@@ -94,7 +92,7 @@ export class Banco {
     this.chorroReservorio.visible = false;
     this.group.add(this.chorroReservorio);
 
-    this.salidaChorro = new THREE.Vector3(-1.7, 1.05, 0);
+    this.salidaChorro = new THREE.Vector3(-1.7, 1.20, 0);
   }
 
   _actualizarManguera() {
