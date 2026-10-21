@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
-import { VRButton } from 'three/addons/webxr/VRButton.js';
+import { ARButton } from 'three/addons/webxr/ARButton.js';
 import { Banco } from './banco.js';
 import { TableroVR } from './tablero.js';
 
@@ -9,7 +9,7 @@ scene.background = new THREE.Color(0x0a0a15);
 scene.fog = new THREE.Fog(0x0a0a15, 10, 35);
 
 const camera = new THREE.PerspectiveCamera(60, innerWidth / innerHeight, 0.1, 100);
-camera.position.set(4, 2, 4); 
+camera.position.set(0, 1.6, 0); // Altura de los ojos en AR
 
 const listener = new THREE.AudioListener();
 camera.add(listener);
@@ -19,38 +19,52 @@ renderer.setSize(innerWidth, innerHeight);
 renderer.xr.enabled = true;
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
 document.body.appendChild(renderer.domElement);
-document.body.appendChild(VRButton.createButton(renderer));
 
-// --- CONTROLES DE RATÓN (ORBIT CONTROLS) ---
+// --- BOTÓN DE AR ---
+const arButton = ARButton.createButton(renderer, {
+  requiredFeatures: ['hit-test'], // Detectar superficies
+  optionalFeatures: ['dom-overlay', 'local-floor'],
+  domOverlay: { root: document.body }
+});
+document.body.appendChild(arButton);
+
+// --- CONTROLES DE RATÓN (Solo pantalla plana) ---
 const controls = new OrbitControls(camera, renderer.domElement);
-controls.target.set(0, 0, 0);
+controls.target.set(0, 1, -1);
 controls.enableDamping = true;
 controls.dampingFactor = 0.05;
 
-// Detectar cuando entramos o salimos de VR para activar/desactivar el ratón
 renderer.xr.addEventListener('sessionstart', () => {
-  controls.enabled = false; // Desactivar ratón en VR
+  controls.enabled = false;
+  scene.background = null; // En AR se ve el mundo real a través de la cámara
 });
 
 renderer.xr.addEventListener('sessionend', () => {
-  controls.enabled = true;  // Reactivar ratón al salir de VR
+  controls.enabled = true;
+  scene.background = new THREE.Color(0x0a0a15);
 });
 
-// --- LUCES Y ESCENARIO ---
-scene.add(new THREE.AmbientLight(0xffffff, 0.6));
+// --- LUCES ---
+scene.add(new THREE.AmbientLight(0xffffff, 0.8));
 scene.add(new THREE.HemisphereLight(0xffffff, 0x444444, 1.0));
 const dir = new THREE.DirectionalLight(0xffffff, 2.0);
 dir.position.set(10, 15, 10);
 scene.add(dir);
 
-const grid = new THREE.GridHelper(20, 20, 0x444444, 0x222222);
-scene.add(grid);
-
-// --- BANCO Y TABLERO VR ---
+// --- BANCO DE FLUIDOS ---
 const banco = new Banco();
+
+// CENTRAMOS EL BANCO FRENTE AL USUARIO
+// Reducimos a 0.3 de tamaño y lo ponemos 1.5 metros al frente
+banco.group.scale.set(0.3, 0.3, 0.3);
+banco.group.position.set(0, 0, -1.5); // X=0 para centrarlo, Z=-1.5 para que esté al frente
 scene.add(banco.group);
 
+// --- TABLERO DE CONTROL ---
 const tablero = new TableroVR(banco);
+// El tablero lo ubicamos justo debajo del banco para que no estorbe
+tablero.group.scale.set(0.3, 0.3, 0.3); 
+tablero.group.position.set(0, -0.5, -1.2); 
 scene.add(tablero.group);
 
 // --- CONTROLADORES VR ---
@@ -60,7 +74,6 @@ scene.add(controller1);
 const controller2 = renderer.xr.getController(1);
 scene.add(controller2);
 
-// Línea del láser para cada controlador
 const geometryLaser = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0, 0, 0), new THREE.Vector3(0, 0, -1)]);
 const materialLaser = new THREE.LineBasicMaterial({ color: 0xff0000 });
 const laser1 = new THREE.Line(geometryLaser, materialLaser);
@@ -113,7 +126,9 @@ function moverSliders(controller) {
     const perilla = colision.objeto;
     const interseccion = raycaster.intersectObject(perilla)[0];
     if (interseccion) {
-      let xLocal = interseccion.point.x - tablero.group.position.x;
+      const escalaTablero = tablero.group.scale.x; 
+      let xLocal = (interseccion.point.x - tablero.group.position.x) / escalaTablero;
+      
       let minX = perilla.userData.posX;
       let maxX = perilla.userData.posX + perilla.userData.ancho;
       
@@ -122,7 +137,9 @@ function moverSliders(controller) {
 
       const pct = (xLocal - minX) / perilla.userData.ancho;
       const valor = perilla.userData.min + (perilla.userData.max - perilla.userData.min) * pct;
+      
       perilla.userData.callback(valor);
+      tablero.actualizarValorSlider(perilla, valor);
     }
   }
 }
@@ -136,7 +153,7 @@ renderer.setAnimationLoop(() => {
     moverSliders(controller1);
     moverSliders(controller2);
   } else {
-    controls.update(); // Actualizar el ratón solo si NO estamos en VR
+    controls.update();
   }
 
   banco.update(dt);
