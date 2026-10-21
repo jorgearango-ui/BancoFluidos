@@ -6,13 +6,11 @@ import { Banco } from './banco.js';
 import { TableroVR } from './tablero.js';
 
 const scene = new THREE.Scene();
-// Fondo transparente para que en AR se vea el mundo real.
-// Si no hay AR, este fondo se reemplaza con el color oscuro.
 scene.background = null; 
 scene.fog = null;
 
 const camera = new THREE.PerspectiveCamera(60, innerWidth / innerHeight, 0.1, 100);
-camera.position.set(0, 1.6, 0); // Altura de los ojos
+camera.position.set(0, 1.6, 0); 
 
 const listener = new THREE.AudioListener();
 camera.add(listener);
@@ -20,7 +18,7 @@ camera.add(listener);
 const renderer = new THREE.WebGLRenderer({ 
   antialias: true, 
   xrCompatible: true, 
-  alpha: true // Importante para AR (fondo transparente)
+  alpha: true 
 });
 renderer.setSize(innerWidth, innerHeight);
 renderer.xr.enabled = true;
@@ -34,44 +32,41 @@ const arSupported = navigator.xr && navigator.xr.isSessionSupported;
 if (arSupported) {
   navigator.xr.isSessionSupported('immersive-ar').then((supported) => {
     if (supported) {
-      // AR (Passthrough)
       xrButton = ARButton.createButton(renderer, {
         requiredFeatures: ['hit-test'],
         optionalFeatures: ['dom-overlay', 'local-floor'],
         domOverlay: { root: document.body }
       });
     } else {
-      // VR (con fondo oscuro)
       scene.background = new THREE.Color(0x0a0a15);
       xrButton = VRButton.createButton(renderer);
     }
     document.body.appendChild(xrButton);
   }).catch(() => {
-    // Si falla la detección, usar VR por defecto
     scene.background = new THREE.Color(0x0a0a15);
     xrButton = VRButton.createButton(renderer);
     document.body.appendChild(xrButton);
   });
 } else {
-  // Navegador sin WebXR (solo pantalla plana)
   scene.background = new THREE.Color(0x0a0a15);
   xrButton = VRButton.createButton(renderer);
   document.body.appendChild(xrButton);
 }
 
-// --- CONTROLES DE RATÓN ---
 const controls = new OrbitControls(camera, renderer.domElement);
 controls.target.set(0, 1, -1.5);
 controls.enableDamping = true;
 controls.dampingFactor = 0.05;
 
-// Manejo de sesiones XR
 renderer.xr.addEventListener('sessionstart', (event) => {
   controls.enabled = false;
-  // Si es sesión AR, quitar fondo. Si es VR, mantener fondo oscuro.
   if (event.session.mode === 'immersive-ar' || event.session.environmentBlendMode === 'alpha-blend') {
     scene.background = null;
     scene.fog = null;
+  }
+  // SONIDO: Reanudar el contexto de audio al entrar en XR
+  if (listener.context.state === 'suspended') {
+    listener.context.resume();
   }
 });
 
@@ -81,29 +76,82 @@ renderer.xr.addEventListener('sessionend', () => {
   scene.fog = new THREE.Fog(0x0a0a15, 10, 35);
 });
 
-// --- LUCES ---
 scene.add(new THREE.AmbientLight(0xffffff, 0.8));
 scene.add(new THREE.HemisphereLight(0xffffff, 0x444444, 1.0));
 const dir = new THREE.DirectionalLight(0xffffff, 2.0);
 dir.position.set(10, 15, 10);
 scene.add(dir);
 
-// --- BANCO DE FLUIDOS (CENTRADO A LA DERECHA) ---
+// --- BANCO DE FLUIDOS ---
 const banco = new Banco();
-banco.group.scale.set(0.3, 0.3, 0.3);
 
-// ¡AQUÍ ESTÁ EL TRUCO! Desplazamos a la DERECHA (X positiva)
-// para compensar que los objetos internos están en X negativas.
-// 1.5 metros a la derecha según tu indicación.
-banco.group.position.set(1.5, 0, -1.5); 
+// AUMENTAMOS LA ESCALA: de 0.3 a 0.8 (más grande)
+banco.group.scale.set(0.8, 0.8, 0.8);
+
+// BAJAMOS EL BANCO: de Y=0 a Y=-1.0 (un metro más abajo)
+// Lo mantenemos a 1.5 metros al frente y a la derecha para que esté centrado
+banco.group.position.set(1.5, -1.0, -1.5); 
 scene.add(banco.group);
 
 // --- TABLERO DE CONTROL ---
 const tablero = new TableroVR(banco);
-tablero.group.scale.set(0.3, 0.3, 0.3);
-// El tablero lo movemos con el banco para que quede frente al usuario
-tablero.group.position.set(1.5, -0.5, -1.2);
+// Escala el tablero proporcionalmente al banco
+tablero.group.scale.set(0.8, 0.8, 0.8);
+// Lo ubicamos debajo del banco, pero más cerca del usuario
+tablero.group.position.set(1.5, -0.8, -1.0);
 scene.add(tablero.group);
+
+// --- SONIDO SINTÉTICO (Igual que antes, para que se escuche en AR/VR) ---
+const ctx = listener.context;
+
+function crearRuidoBlanco() {
+  const bufferSize = ctx.sampleRate * 2;
+  const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+  const data = buffer.getChannelData(0);
+  for (let i = 0; i < bufferSize; i++) {
+    data[i] = Math.random() * 2 - 1;
+  }
+  return buffer;
+}
+
+// Sonido de la bomba (motor grave)
+const fuenteBomba = ctx.createBufferSource();
+fuenteBomba.buffer = crearRuidoBlanco();
+fuenteBomba.loop = true;
+
+const filtroBomba = ctx.createBiquadFilter();
+filtroBomba.type = 'lowpass';
+filtroBomba.frequency.value = 150;
+
+const gananciaBomba = ctx.createGain();
+gananciaBomba.gain.value = 0;
+
+fuenteBomba.connect(filtroBomba);
+filtroBomba.connect(gananciaBomba);
+gananciaBomba.connect(ctx.destination);
+fuenteBomba.start();
+
+// Sonido del agua (cascada)
+const fuenteAgua = ctx.createBufferSource();
+fuenteAgua.buffer = crearRuidoBlanco();
+fuenteAgua.loop = true;
+
+const filtroAgua = ctx.createBiquadFilter();
+filtroAgua.type = 'bandpass';
+filtroAgua.frequency.value = 1000;
+filtroAgua.Q.value = 0.5;
+
+const gananciaAgua = ctx.createGain();
+gananciaAgua.gain.value = 0;
+
+fuenteAgua.connect(filtroAgua);
+filtroAgua.connect(gananciaAgua);
+gananciaAgua.connect(ctx.destination);
+fuenteAgua.start();
+
+// Asignar las ganancias al banco para que los botones las controlen
+banco.gananciaBomba = gananciaBomba;
+banco.gananciaAgua = gananciaAgua;
 
 // --- CONTROLADORES VR/AR ---
 const controller1 = renderer.xr.getController(0);
@@ -112,7 +160,6 @@ scene.add(controller1);
 const controller2 = renderer.xr.getController(1);
 scene.add(controller2);
 
-// Líneas del láser
 const geometryLaser = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0, 0, 0), new THREE.Vector3(0, 0, -1)]);
 const materialLaser = new THREE.LineBasicMaterial({ color: 0xff0000 });
 const laser1 = new THREE.Line(geometryLaser, materialLaser);
