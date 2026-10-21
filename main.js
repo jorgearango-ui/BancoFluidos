@@ -90,7 +90,7 @@ scene.add(banco.group);
 // --- TABLERO DE CONTROL (Escala proporcional al banco) ---
 const tablero = new TableroVR(banco);
 tablero.group.scale.set(1.3, 1.3, 1.3);
-tablero.group.position.set(1.5, -0.6, -1.0);
+tablero.group.position.set(1.5, 1, -1.0);
 scene.add(tablero.group);
 
 // --- SONIDO SINTÉTICO ---
