@@ -4,13 +4,16 @@ export class TableroVR {
   constructor(banco) {
     this.banco = banco;
     this.group = new THREE.Group();
-    
+
     // Posición ajustada (derecha y arriba)
-    this.group.position.set(-0.6, 0.45, 0.5); 
-    
+    this.group.position.set(-0.6, 0.45, 0.5);
+
     this.botones = [];
     this.sliders = [];
-    this.etiquetasValores = []; // Para guardar las etiquetas de texto dinámicas
+    this.etiquetasValores = [];
+
+    // Callback que main.js conecta al listener de audio
+    this.onActivarAudio = null;
 
     this._crearPanel();
     this._crearBotones();
@@ -22,22 +25,27 @@ export class TableroVR {
     canvas.width = 256;
     canvas.height = 128;
     const ctx = canvas.getContext('2d');
-    
+
     ctx.fillStyle = bgColor;
     ctx.fillRect(0, 0, 256, 128);
-    
+
     ctx.fillStyle = textColor;
     ctx.font = 'bold 28px Arial';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     ctx.fillText(texto, 128, 64);
-    
+
     return new THREE.CanvasTexture(canvas);
   }
 
   _crearPanel() {
     const geo = new THREE.PlaneGeometry(1.4, 0.8);
-    const mat = new THREE.MeshStandardMaterial({ color: 0x222222, side: THREE.DoubleSide, transparent: true, opacity: 0.8 });
+    const mat = new THREE.MeshStandardMaterial({
+      color: 0x222222,
+      side: THREE.DoubleSide,
+      transparent: true,
+      opacity: 0.8
+    });
     const panel = new THREE.Mesh(geo, mat);
     this.group.add(panel);
 
@@ -51,10 +59,10 @@ export class TableroVR {
   _crearBoton(nombre, colorHex, posX, posY, callback) {
     const geo = new THREE.BoxGeometry(0.18, 0.08, 0.02);
     const colorBg = '#' + colorHex.toString(16).padStart(6, '0');
-    
+
     const textura = this._crearTexturaTexto(nombre, colorBg);
     const mat = new THREE.MeshStandardMaterial({ map: textura });
-    
+
     const boton = new THREE.Mesh(geo, mat);
     boton.position.set(posX, posY, 0.03);
     boton.userData = { tipo: 'boton', nombre: nombre, callback: callback, activo: false };
@@ -74,9 +82,14 @@ export class TableroVR {
     this._crearBoton('Gasolina', 0x88aa00, -0.15, 0.10, () => this.banco.setFluidoVR(680));
     this._crearBoton('Glicerina', 0x99ccff, 0.05, 0.10, () => this.banco.setFluidoVR(1260));
 
-    this._crearBoton('Pausar', 0xffaa00, -0.35, -0.02, () => this.banco.pausarVectorVR());
-    this._crearBoton('Informe', 0x2b579a, 0.05, -0.02, () => this.banco.generarInformeVR());
+    this._crearBoton('Pausar', 0xffaa00, -0.55, -0.02, () => this.banco.pausarVectorVR());
+    this._crearBoton('Informe', 0x2b579a, -0.35, -0.02, () => this.banco.generarInformeVR());
     this._crearBoton('Reset', 0x8888ff, -0.15, -0.02, () => this.banco.resetVR());
+
+    // Botón de audio (funciona en VR/AR, donde el botón HTML no se ve)
+    this._crearBoton('Audio', 0xaa00ff, 0.25, -0.02, () => {
+      if (this.onActivarAudio) this.onActivarAudio();
+    });
   }
 
   _crearSliders() {
@@ -86,42 +99,37 @@ export class TableroVR {
   }
 
   _crearSlider(nombre, posX, posY, min, max, valorInicial, callback, unidad) {
-    // Etiqueta del nombre
     const texturaLabel = this._crearTexturaTexto(nombre, '#000000', '#ffffff');
     const matLabel = new THREE.MeshBasicMaterial({ map: texturaLabel, transparent: true });
     const label = new THREE.Mesh(new THREE.PlaneGeometry(0.3, 0.08), matLabel);
     label.position.set(posX - 0.15, posY, 0.02);
     this.group.add(label);
 
-    // Etiqueta del valor (inicialmente vacía o con el valor inicial)
     const texturaValor = this._crearTexturaTexto(`${valorInicial.toFixed(1)} ${unidad}`, '#000000', '#00ff00');
     const matValor = new THREE.MeshBasicMaterial({ map: texturaValor, transparent: true });
     const valorLabel = new THREE.Mesh(new THREE.PlaneGeometry(0.2, 0.06), matValor);
     valorLabel.position.set(posX + 0.55, posY, 0.02);
     this.group.add(valorLabel);
 
-    // Barra de fondo
     const fondoGeo = new THREE.BoxGeometry(0.5, 0.02, 0.02);
     const fondoMat = new THREE.MeshStandardMaterial({ color: 0x555555 });
     const fondo = new THREE.Mesh(fondoGeo, fondoMat);
     fondo.position.set(posX + 0.25, posY, 0.02);
     this.group.add(fondo);
 
-    // Perilla
     const perillaGeo = new THREE.SphereGeometry(0.03, 16, 16);
     const perillaMat = new THREE.MeshStandardMaterial({ color: 0xffaa00 });
     const perilla = new THREE.Mesh(perillaGeo, perillaMat);
-    
+
     const pct = (valorInicial - min) / (max - min);
     perilla.position.set(posX + (pct * 0.5), posY, 0.04);
-    
-    // Guardamos las referencias en userData para actualizar el texto después
-    perilla.userData = { 
-      tipo: 'slider', 
-      min: min, 
-      max: max, 
-      callback: callback, 
-      posX: posX, 
+
+    perilla.userData = {
+      tipo: 'slider',
+      min: min,
+      max: max,
+      callback: callback,
+      posX: posX,
       ancho: 0.5,
       arrastrando: false,
       valorLabel: valorLabel,
@@ -131,12 +139,10 @@ export class TableroVR {
     this.sliders.push(perilla);
   }
 
-  // NUEVA FUNCIÓN: Actualiza el texto del valor del slider
   actualizarValorSlider(perilla, nuevoValor) {
     const texto = `${nuevoValor.toFixed(2)} ${perilla.userData.unidad}`;
-    // Actualizamos la textura del label
     const nuevaTextura = this._crearTexturaTexto(texto, '#000000', '#00ff00');
-    perilla.userData.valorLabel.material.map.dispose(); // Limpiar textura antigua
+    perilla.userData.valorLabel.material.map.dispose();
     perilla.userData.valorLabel.material.map = nuevaTextura;
     perilla.userData.valorLabel.material.needsUpdate = true;
   }

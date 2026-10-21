@@ -26,7 +26,7 @@
       <label>Radio Tanque Principal: <span id="valRadioTanque" style="color:#00aaff; font-weight:bold;">0.6</span> m
         <input type="range" id="radio" min="0.4" max="1.0" step="0.1" value="0.6" />
       </label>
-      
+
       <label style="margin-top: 5px; color: #00ffff;">Radio Venturi: <span id="valRadioVenturi" style="color:#00ffff; font-weight:bold;">0.08</span> m
         <input type="range" id="radioVenturi" min="0.02" max="0.10" step="0.01" value="0.08" />
       </label>
@@ -38,12 +38,12 @@
       <button id="btnReset" style="background:#8888ff; margin-top: 5px; font-weight:bold;">⟳ RESET</button>
       <button id="btnPausa" style="background:#ffaa00; margin-top: 5px; font-weight:bold;">⏸ PAUSAR VECTOR</button>
       <button id="btnInforme" style="background:#2b579a; color: white; margin-top: 5px; font-weight:bold;">📄 GENERAR INFORME (Word)</button>
-      
+
       <button id="btnLlaveEntrada" style="background:#ff5555; margin-top: 5px;">Abrir Llave Tanque Principal</button>
       <button id="btnLlaveSalida" style="background:#ff5555; margin-top: 5px;" disabled>Abrir Válvula Tanque Principal</button>
       <button id="btnVaciar" style="background:#ff5555; margin-top: 5px;" disabled>Abrir Válvula Tanque Dos</button>
       <button id="btnBomba" style="background:#ff5555; margin-top: 5px;">Encender Motobomba</button>
-      
+
       <label style="margin-top: 10px;">Fluido:
         <select id="fluido">
           <option value="1000">Agua (1000)</option>
@@ -55,6 +55,9 @@
       <button id="btnVR" style="margin-top: 15px;">Entrar en VR</button>
     </div>
   </div>
+
+  <!-- Overlay para dom-overlay en AR (el botón de audio 3D está en el tablero) -->
+  <div id="ar-overlay" style="position: fixed; inset: 0; pointer-events: none; z-index: 99999;"></div>
 
   <!-- Librería para generar Word -->
   <script src="https://unpkg.com/docx@7.8.2/build/index.js"></script>
