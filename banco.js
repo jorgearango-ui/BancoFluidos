@@ -33,8 +33,6 @@ export class Banco {
     this.vVenturi = 2.0;
     this.factorEscalaChorro = 0.08;
 
-    // Eliminamos el factor visual porque ahora calcularemos la velocidad real en la tubería
-
     this.vector = new VectorAgua();
     this.group.add(this.vector.group);
     this.cicloActivo = false;
@@ -660,25 +658,24 @@ export class Banco {
     const CAUDAL = 0.002 * (this.potenciaBombaWatts / 1000);
     
     // Áreas reales de las tuberías (donde ocurre el efecto Venturi)
-    const areaTuboEntrada = Math.PI * this.radioTuboDescarga * this.radioTuboDescarga; // Área de la tubería de salida
-    const areaTuboSalida = Math.PI * this.radioTuboDescarga * this.radioTuboDescarga;  // Área del tubo de descarga al reservorio
+    const areaTubo = Math.PI * this.radioTuboDescarga * this.radioTuboDescarga;
 
     // =========================================================
     // 1. ACTUALIZACIÓN DE MEDIDORES DE VELOCIDAD (CADA FRAME)
     // =========================================================
     
-    // Tanque Principal (Salida hacia Tanque Dos): El agua entra a la tubería
+    // Tanque Principal (Salida hacia Tanque Dos)
     const flujoSalidaTanque = this.tanque.llaveSalidaAbierta && this.tanque.alturaActual > this.umbralTanque;
-    const vSalidaTanqueReal = flujoSalidaTanque ? (CAUDAL / areaTuboEntrada) : 0;
+    const vSalidaTanqueReal = flujoSalidaTanque ? (CAUDAL / areaTubo) : 0;
     this.tanque.setVelocidadSalida(vSalidaTanqueReal);
 
-    // Tanque Dos (Entrada desde Tanque Principal): El agua llega por la tubería
-    const vEntradaDescReal = flujoSalidaTanque ? (CAUDAL / areaTuboEntrada) : 0;
+    // Tanque Dos (Entrada desde Tanque Principal)
+    const vEntradaDescReal = flujoSalidaTanque ? (CAUDAL / areaTubo) : 0;
     this.descarga.setVelocidadEntrada(vEntradaDescReal);
 
-    // Tanque Dos (Salida hacia Reservorio): El agua sale por el tubo de descarga final
+    // Tanque Dos (Salida hacia Reservorio)
     const flujoSalidaDescarga = this.descarga.valvulaAbierta && this.descarga.alturaActual > this.umbralDescarga;
-    const vSalidaDescReal = flujoSalidaDescarga ? (CAUDAL / areaTuboSalida) : 0;
+    const vSalidaDescReal = flujoSalidaDescarga ? (CAUDAL / areaTubo) : 0;
     this.descarga.setVelocidadSalida(vSalidaDescReal);
 
 

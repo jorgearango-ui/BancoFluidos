@@ -19,12 +19,12 @@ export function crearManometro(posicion, titulo, escala = 0.35) {
 
   const etiqueta = crearEtiqueta3D(titulo, 'rgba(0,0,0,0.9)');
   etiqueta.sprite.position.set(0, 0.42, 0);
-  etiqueta.sprite.scale.set(1.6, 0.4, 1);          // ← Título más grande
+  etiqueta.sprite.scale.set(1.6, 0.4, 1);
   group.add(etiqueta.sprite);
 
   const valor = crearEtiqueta3D('0.0', 'rgba(0,0,0,0.9)');
   valor.sprite.position.set(0, -0.42, 0);
-  valor.sprite.scale.set(1.6, 0.4, 1);            // ← Valor más grande
+  valor.sprite.scale.set(1.6, 0.4, 1);
   group.add(valor.sprite);
 
   return {
@@ -42,23 +42,23 @@ export function crearMedidorVelocidad(posicion, titulo, escala = 0.35) {
   group.position.copy(posicion);
   group.scale.set(escala, escala, escala);
 
-  // Caja más grande para que quepa el texto grande
   const caja = new THREE.Mesh(new THREE.BoxGeometry(0.8, 0.4, 0.1), new THREE.MeshStandardMaterial({ color: 0x222222 }));
   group.add(caja);
 
   const etiqueta = crearEtiqueta3D(titulo, 'rgba(0, 150, 255, 0.9)');
   etiqueta.sprite.position.set(0, 0.32, 0);
-  etiqueta.sprite.scale.set(1.6, 0.4, 1);          // ← Título más grande
+  etiqueta.sprite.scale.set(1.6, 0.4, 1);
   group.add(etiqueta.sprite);
 
   const valor = crearEtiqueta3D('0.00', 'rgba(0,0,0,0.9)');
   valor.sprite.position.set(0, 0, 0.06);
-  valor.sprite.scale.set(1.6, 0.4, 1);            // ← Valor más grande
+  valor.sprite.scale.set(1.6, 0.4, 1);
   group.add(valor.sprite);
 
   return {
     group,
     setValor(v, unidad = 'm/s') {
+      // Actualiza el texto del sprite
       valor.setTexto(`${v.toFixed(2)} ${unidad}`);
     }
   };
@@ -68,13 +68,16 @@ export function crearEtiqueta3D(texto, bg = 'rgba(0,0,0,0.9)') {
   const tex = textoATextura(texto, bg);
   const mat = new THREE.SpriteMaterial({ map: tex, depthTest: false, transparent: true });
   const sprite = new THREE.Sprite(mat);
-  sprite.scale.set(1.8, 0.45, 1);                 // ← default más grande
+  sprite.scale.set(1.8, 0.45, 1);
+
   return {
     sprite,
     setTexto(nuevoTexto) {
-      sprite.material.map.dispose();
-      sprite.material.map = textoATextura(nuevoTexto, bg);
-      sprite.material.needsUpdate = true;
+      // Forzar la actualización de la textura
+      const nuevaTextura = textoATextura(nuevoTexto, bg);
+      sprite.material.map.dispose(); // Liberar la anterior
+      sprite.material.map = nuevaTextura;
+      sprite.material.needsUpdate = true; // CRÍTICO para que Three.js lo redibuje
     }
   };
 }
@@ -91,7 +94,7 @@ function textoATextura(texto, bg = 'rgba(0,0,0,0.9)') {
   ctx.lineWidth = 8;
   ctx.strokeRect(0, 0, 512, 128);
   ctx.fillStyle = '#ffffff';
-  ctx.font = 'bold 72px sans-serif';              // ← antes 56px
+  ctx.font = 'bold 72px sans-serif';
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
   ctx.fillText(texto, 256, 64);
