@@ -33,6 +33,10 @@ export class Banco {
     this.vVenturi = 2.0;
     this.factorEscalaChorro = 0.08;
 
+    // Factor para que los velocímetros muestren un valor legible en VR
+    // (la velocidad física real es del orden de mm/s por el tamaño del tanque)
+    this.factorVisualVelocidad = 100;
+
     this.vector = new VectorAgua();
     this.group.add(this.vector.group);
     this.cicloActivo = false;
@@ -93,7 +97,6 @@ export class Banco {
     this.chorroReservorio.visible = false;
     this.group.add(this.chorroReservorio);
 
-    // Salida del chorro alineada con el tubo horizontal
     this.salidaChorro = new THREE.Vector3(-1.7, 1.20, 0);
   }
 
@@ -113,7 +116,7 @@ export class Banco {
   _reset() {
     this.pausarVector = false;
 
-    // Reservorio inicia al 90 % para que no se vacíe tan rápido al operar el circuito
+    // Reservorio inicia al 90 %
     const volMaxBomba = this.bomba.getAreaBase() * this.bomba.alturaMaxima;
     this.bomba.setVolumen(volMaxBomba * 0.90);
     this.tanque.setVolumen(0.01);
@@ -660,6 +663,31 @@ export class Banco {
   update(dt = 0.016) {
     const CAUDAL = 0.002 * (this.potenciaBombaWatts / 1000);
 
+    // =========================================================
+    // 1. ACTUALIZACIÓN DE MEDIDORES DE VELOCIDAD (CADA FRAME)
+    // =========================================================
+    
+    // Tanque Principal (Salida hacia Tanque Dos)
+    const flujoSalidaTanque = this.tanque.llaveSalidaAbierta && this.tanque.alturaActual > this.umbralTanque;
+    const vSalidaTanqueReal = flujoSalidaTanque ? (CAUDAL / this.tanque.getAreaBase()) : 0;
+    this.tanque.setVelocidadSalida(vSalidaTanqueReal * this.factorVisualVelocidad);
+
+    // Tanque Dos (Entrada desde Tanque Principal)
+    const areaEntradaDesc = this.descarga.largo * this.descarga.profundidad;
+    const vEntradaDescReal = flujoSalidaTanque ? (CAUDAL / areaEntradaDesc) : 0;
+    this.descarga.setVelocidadEntrada(vEntradaDescReal * this.factorVisualVelocidad);
+
+    // Tanque Dos (Salida hacia Reservorio)
+    const flujoSalidaDescarga = this.descarga.valvulaAbierta && this.descarga.alturaActual > this.umbralDescarga;
+    const areaSalidaDesc = this.descarga.largo * this.descarga.profundidad;
+    const vSalidaDescReal = flujoSalidaDescarga ? (CAUDAL / areaSalidaDesc) : 0;
+    this.descarga.setVelocidadSalida(vSalidaDescReal * this.factorVisualVelocidad);
+
+
+    // =========================================================
+    // 2. TRANSFERENCIAS DE VOLUMEN (FÍSICA REAL, SIN FACTOR VISUAL)
+    // =========================================================
+
     // --- Transferencia 1: Reservorio → Tanque principal ---
     if (this.tanque.llaveEntradaAbierta && this.bomba.encendida) {
       const volRes = this.bomba.getVolumen();
@@ -675,7 +703,7 @@ export class Banco {
     }
 
     // --- Transferencia 2: Tanque principal → Tanque dos (descarga) ---
-    if (this.tanque.llaveSalidaAbierta && this.tanque.alturaActual > this.umbralTanque) {
+    if (flujoSalidaTanque) {
       const volTanque = this.tanque.getVolumen();
       const volDesc = this.descarga.getVolumen();
       const volDescMax = this.descarga._volumenHasta(this.descarga.alturaMaxima);
@@ -684,19 +712,11 @@ export class Banco {
         this.tanque.setVolumen(volTanque - transferir);
         this.descarga.setVolumen(volDesc + transferir);
         this._actualizar();
-
-        // Actualizar medidor de velocidad de salida del tanque principal
-        const vSalidaTanque = CAUDAL / this.tanque.getAreaBase();
-        this.tanque.setVelocidadSalida(vSalidaTanque);
-
-        // Actualizar medidor de velocidad de entrada del tanque dos
-        const areaEntradaDesc = this.descarga.largo * this.descarga.profundidad;
-        this.descarga.setVelocidadEntrada(CAUDAL / areaEntradaDesc);
       }
     }
 
     // --- Transferencia 3: Tanque dos → Reservorio ---
-    if (this.descarga.valvulaAbierta && this.descarga.alturaActual > this.umbralDescarga) {
+    if (flujoSalidaDescarga) {
       const volDesc = this.descarga.getVolumen();
       const volRes = this.bomba.getVolumen();
       const volResMax = this.bomba.getAreaBase() * this.bomba.alturaMaxima;
@@ -704,12 +724,12 @@ export class Banco {
       if (transferir > 0) {
         this.descarga.setVolumen(volDesc - transferir);
         this.bomba.setVolumen(volRes + transferir);
-
-        // Actualizar medidor de velocidad de salida del tanque dos
-        const areaSalidaDesc = this.descarga.largo * this.descarga.profundidad;
-        this.descarga.setVelocidadSalida(CAUDAL / areaSalidaDesc);
       }
     }
+
+    // =========================================================
+    // 3. LÓGICA DE ESTADO Y ANIMACIONES
+    // =========================================================
 
     if (this.bomba.encendida) {
       if (this.bomba.getVolumen() <= 0.0001) {
