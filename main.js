@@ -5,11 +5,12 @@ import { ARButton } from 'three/addons/webxr/ARButton.js';
 import { Banco } from './banco.js';
 import { TableroVR } from './tablero.js';
 
-console.log("✅ main.js v4 cargado correctamente");
+console.log("✅ main.js v5 cargado correctamente");
 
 const scene = new THREE.Scene();
-scene.background = null;
-scene.fog = null;
+// Color de fondo para pantalla normal
+scene.background = new THREE.Color(0x0a0a15);
+scene.fog = new THREE.Fog(0x0a0a15, 10, 35);
 
 const camera = new THREE.PerspectiveCamera(60, innerWidth / innerHeight, 0.1, 100);
 camera.position.set(0, 1.6, 2);
@@ -28,40 +29,35 @@ renderer.xr.enabled = true;
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
 document.body.appendChild(renderer.domElement);
 
-// --- BOTÓN DE AR/VR ---
+// --- CREACIÓN DINÁMICA DEL BOTÓN AR/VR ---
 let xrButton;
-let arSupportedFlag = false;
 const arSupported = navigator.xr && navigator.xr.isSessionSupported;
 
 if (arSupported) {
-  navigator.xr.isSessionSupported('immersive-ar').then((supported) => {
-    if (supported) {
-      arSupportedFlag = true;
+  navigator.xr.isSessionSupported('immersive-ar').then((supportedAR) => {
+    if (supportedAR) {
+      // Si soporta AR, mostramos AR
       xrButton = ARButton.createButton(renderer, {
         requiredFeatures: ['hit-test'],
-        optionalFeatures: ['dom-overlay', 'local-floor'],
+        optionalFeatures: ['dom-overlay'],
         domOverlay: { root: document.getElementById('ar-overlay') }
       });
+      document.body.appendChild(xrButton);
     } else {
-      scene.background = new THREE.Color(0x0a0a15);
-      scene.fog = new THREE.Fog(0x0a0a15, 10, 35);
-      xrButton = VRButton.createButton(renderer);
+      // Si no soporta AR, probamos VR
+      navigator.xr.isSessionSupported('immersive-vr').then((supportedVR) => {
+        if (supportedVR) {
+          xrButton = VRButton.createButton(renderer);
+          document.body.appendChild(xrButton);
+        }
+      }).catch(() => {});
     }
-    document.body.appendChild(xrButton);
   }).catch(() => {
-    scene.background = new THREE.Color(0x0a0a15);
-    scene.fog = new THREE.Fog(0x0a0a15, 10, 35);
-    xrButton = VRButton.createButton(renderer);
-    document.body.appendChild(xrButton);
+    // Fallback si falla la detección
   });
-} else {
-  scene.background = new THREE.Color(0x0a0a15);
-  scene.fog = new THREE.Fog(0x0a0a15, 10, 35);
-  xrButton = VRButton.createButton(renderer);
-  document.body.appendChild(xrButton);
 }
 
-// --- BOTÓN DE ACTIVAR SONIDO (solo en pantalla normal) ---
+// --- BOTÓN DE ACTIVAR SONIDO ---
 const btnSonido = document.createElement('button');
 btnSonido.textContent = '🔊 ACTIVAR SONIDO';
 btnSonido.style.position = 'fixed';
@@ -109,20 +105,18 @@ banco.group.scale.set(0.5, 0.5, 0.5);
 banco.group.position.set(1.5, -0.8, -1.5);
 scene.add(banco.group);
 
-// Guardar posición/escala originales para restaurar al salir de AR
 const posOriginalBanco = banco.group.position.clone();
 const escalaOriginalBanco = banco.group.scale.clone();
 
-// --- TABLERO DE CONTROL ---
+// --- TABLERO DE CONTROL (Ajustado para no tapar velocímetros) ---
 const tablero = new TableroVR(banco);
-tablero.group.scale.set(0.936, 0.936, 0.936);
-tablero.group.position.set(1.2, 0.85, -1.4);
+tablero.group.scale.set(0.8, 0.8, 0.8);
+tablero.group.position.set(1.2, 0.85, -1.4); // Subido y alejado un poco
 scene.add(tablero.group);
 
 const posOriginalTablero = tablero.group.position.clone();
 const escalaOriginalTablero = tablero.group.scale.clone();
 
-// Conectar el botón de audio 3D del tablero con el listener
 tablero.onActivarAudio = () => {
   activarAudio();
 };
@@ -191,11 +185,9 @@ renderer.xr.addEventListener('sessionstart', async (event) => {
   if (isAR) {
     scene.background = null;
     scene.fog = null;
-
-    // Ocultar el botón de sonido HTML (usaremos el del tablero 3D)
     btnSonido.style.display = 'none';
-
-    // Ocultar el banco hasta que se coloque sobre una superficie
+    
+    // Ocultar todo hasta que se apunte a una superficie
     banco.group.visible = false;
     tablero.group.visible = false;
     bancoColocado = false;
@@ -206,6 +198,13 @@ renderer.xr.addEventListener('sessionstart', async (event) => {
     } catch (e) {
       console.warn('Hit test no disponible:', e);
     }
+  } else {
+    // Si es VR (no AR), dejamos todo visible
+    scene.background = new THREE.Color(0x0a0a15);
+    scene.fog = new THREE.Fog(0x0a0a15, 10, 35);
+    btnSonido.style.display = 'none';
+    banco.group.visible = true;
+    tablero.group.visible = true;
   }
 
   if (listener.context.state === 'suspended') {
@@ -218,7 +217,6 @@ renderer.xr.addEventListener('sessionend', () => {
   scene.background = new THREE.Color(0x0a0a15);
   scene.fog = new THREE.Fog(0x0a0a15, 10, 35);
 
-  // Restaurar posiciones/escala originales
   banco.group.position.copy(posOriginalBanco);
   banco.group.scale.copy(escalaOriginalBanco);
   banco.group.visible = true;
@@ -265,15 +263,14 @@ function onSelectStart(event) {
     listener.context.resume();
   }
 
-  // Si estamos en AR y el banco aún no está colocado, colócalo aquí
+  // Colocar en AR
   if (renderer.xr.isPresenting && renderer.xr.getSession().mode === 'immersive-ar' && !bancoColocado && reticle.visible) {
     banco.group.position.setFromMatrixPosition(reticle.matrix);
     banco.group.scale.set(0.25, 0.25, 0.25);
     banco.group.visible = true;
 
-    // El tablero se coloca relativo al banco
     tablero.group.position.copy(banco.group.position);
-    tablero.group.position.y += 0.5;
+    tablero.group.position.y += 0.6; // Subido un poco para que no tape en AR
     tablero.group.position.z += 0.3;
     tablero.group.scale.set(0.3, 0.3, 0.3);
     tablero.group.visible = true;
@@ -336,7 +333,6 @@ const clock = new THREE.Clock();
 renderer.setAnimationLoop((timestamp, frame) => {
   const dt = clock.getDelta();
 
-  // Hit-test: colocar reticle sobre superficie detectada
   if (frame && hitTestSource) {
     const referenceSpace = renderer.xr.getReferenceSpace();
     const hitTestResults = frame.getHitTestResults(hitTestSource);
