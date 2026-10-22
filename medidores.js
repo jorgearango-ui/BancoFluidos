@@ -18,13 +18,11 @@ export function crearManometro(posicion, titulo, escala = 0.35) {
   group.add(aguja);
 
   const etiqueta = crearEtiqueta3D(titulo, 'rgba(0,0,0,0.9)');
-  etiqueta.sprite.position.set(0, 0.42, 0);
-  etiqueta.sprite.scale.set(1.6, 0.4, 1);
+  etiqueta.sprite.position.set(0, 0.38, 0);
   group.add(etiqueta.sprite);
 
   const valor = crearEtiqueta3D('0.0', 'rgba(0,0,0,0.9)');
-  valor.sprite.position.set(0, -0.42, 0);
-  valor.sprite.scale.set(1.6, 0.4, 1);
+  valor.sprite.position.set(0, -0.38, 0);
   group.add(valor.sprite);
 
   return {
@@ -42,64 +40,76 @@ export function crearMedidorVelocidad(posicion, titulo, escala = 0.35) {
   group.position.copy(posicion);
   group.scale.set(escala, escala, escala);
 
-  const caja = new THREE.Mesh(new THREE.BoxGeometry(0.8, 0.4, 0.1), new THREE.MeshStandardMaterial({ color: 0x222222 }));
+  const caja = new THREE.Mesh(new THREE.BoxGeometry(0.6, 0.3, 0.1), new THREE.MeshStandardMaterial({ color: 0x222222 }));
   group.add(caja);
 
   const etiqueta = crearEtiqueta3D(titulo, 'rgba(0, 150, 255, 0.9)');
-  etiqueta.sprite.position.set(0, 0.32, 0);
-  etiqueta.sprite.scale.set(1.6, 0.4, 1);
+  etiqueta.sprite.position.set(0, 0.28, 0);
   group.add(etiqueta.sprite);
 
   const valor = crearEtiqueta3D('0.00', 'rgba(0,0,0,0.9)');
   valor.sprite.position.set(0, 0, 0.06);
-  valor.sprite.scale.set(1.6, 0.4, 1);
   group.add(valor.sprite);
 
   return {
     group,
     setValor(v, unidad = 'm/s') {
-      // Actualiza el texto del sprite
       valor.setTexto(`${v.toFixed(2)} ${unidad}`);
     }
   };
 }
 
 export function crearEtiqueta3D(texto, bg = 'rgba(0,0,0,0.9)') {
-  const tex = textoATextura(texto, bg);
+  const { tex, aspect } = textoATextura(texto, bg);
   const mat = new THREE.SpriteMaterial({ map: tex, depthTest: false, transparent: true });
   const sprite = new THREE.Sprite(mat);
-  sprite.scale.set(1.8, 0.45, 1);
+  
+  const alto = 0.3;
+  sprite.scale.set(alto * aspect, alto, 1); // Ajuste dinámico
 
   return {
     sprite,
     setTexto(nuevoTexto) {
-      // Forzar la actualización de la textura
-      const nuevaTextura = textoATextura(nuevoTexto, bg);
-      sprite.material.map.dispose(); // Liberar la anterior
-      sprite.material.map = nuevaTextura;
-      sprite.material.needsUpdate = true; // CRÍTICO para que Three.js lo redibuje
+      const { tex: nuevaTex, aspect: nuevoAspect } = textoATextura(nuevoTexto, bg);
+      sprite.material.map.dispose();
+      sprite.material.map = nuevaTex;
+      sprite.material.needsUpdate = true;
+      sprite.scale.set(alto * nuevoAspect, alto, 1);
     }
   };
 }
 
 function textoATextura(texto, bg = 'rgba(0,0,0,0.9)') {
   const canvas = document.createElement('canvas');
-  canvas.width = 512;
-  canvas.height = 128;
   const ctx = canvas.getContext('2d');
 
+  // Configurar fuente para medir el texto
+  const font = 'bold 64px sans-serif';
+  ctx.font = font;
+  
+  // Medir el ancho real del texto
+  const textWidth = ctx.measureText(texto).width;
+  
+  // El ancho del canvas será el ancho del texto + un margen de 30px a cada lado
+  const padding = 30; 
+  canvas.width = textWidth + padding * 2;
+  canvas.height = 96;
+
+  // Redibujar porque cambiar el tamaño del canvas resetea el contexto
+  ctx.font = font;
   ctx.fillStyle = bg;
-  ctx.fillRect(0, 0, 512, 128);
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
   ctx.strokeStyle = 'rgba(255,255,255,0.6)';
-  ctx.lineWidth = 8;
-  ctx.strokeRect(0, 0, 512, 128);
+  ctx.lineWidth = 6;
+  ctx.strokeRect(0, 0, canvas.width, canvas.height);
   ctx.fillStyle = '#ffffff';
-  ctx.font = 'bold 72px sans-serif';
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
-  ctx.fillText(texto, 256, 64);
+  ctx.fillText(texto, canvas.width / 2, canvas.height / 2);
 
   const tex = new THREE.CanvasTexture(canvas);
   tex.needsUpdate = true;
-  return tex;
+  
+  // Retornamos también la relación de aspecto (ancho / alto)
+  return { tex, aspect: canvas.width / canvas.height };
 }

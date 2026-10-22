@@ -44,13 +44,11 @@ export class TableroVR {
   }
 
   _crearPanel() {
-    // Panel compacto
     const geo = new THREE.PlaneGeometry(1.55, 0.80);
     const mat = new THREE.MeshStandardMaterial({ color: 0x1a1a1a, side: THREE.DoubleSide, transparent: true, opacity: 0.9 });
     const panel = new THREE.Mesh(geo, mat);
     this.group.add(panel);
 
-    // Marco o borde para delimitar visualmente
     const borderGeo = new THREE.EdgesGeometry(geo);
     const borderMat = new THREE.LineBasicMaterial({ color: 0x555555 });
     const border = new THREE.LineSegments(borderGeo, borderMat);
@@ -65,7 +63,8 @@ export class TableroVR {
   }
 
   _crearBoton(nombre, colorHex, posX, posY, ancho = 0.26, callback) {
-    const geo = new THREE.BoxGeometry(ancho, 0.10, 0.02);
+    // Reducimos el alto a 0.08 para que no ocupen tanto espacio vertical
+    const geo = new THREE.BoxGeometry(ancho, 0.08, 0.02);
     const colorBg = '#' + colorHex.toString(16).padStart(6, '0');
 
     const textura = this._crearTexturaTexto(nombre, colorBg);
@@ -88,16 +87,13 @@ export class TableroVR {
   }
 
   _crearBotones() {
-    // --- Fila 1: Accionamientos del circuito (Y = 0.22) ---
-    // 5 botones equiespaciados de -0.64 a 0.64
     const y1 = 0.22;
-    const wBot = 0.24; // Ancho uniforme
+    const wBot = 0.24;
     this._crearBoton('Bomba',           0xff5555, -0.64, y1, wBot, () => this.banco.toggleBombaVR());
     this._crearBoton('Llave Tq',        0xff5555, -0.32, y1, wBot, () => this.banco.toggleLlaveEntradaVR());
     this._crearBoton('Válv Tq',         0xff5555,  0.00, y1, wBot, () => this.banco.toggleLlaveSalidaVR());
     this._crearBoton('Válv Desc',       0xff5555,  0.32, y1, wBot, () => this.banco.toggleValvulaDescargaVR());
 
-    // Selector de fluido (botón que cicla)
     const f0 = this.fluidos[0];
     this.botonFluido = this._crearBoton(
       `Fluido: ${f0.nombre}`,
@@ -111,7 +107,6 @@ export class TableroVR {
       }
     );
 
-    // --- Fila 2: Acciones generales (Y = 0.08) ---
     const y2 = 0.08;
     this._crearBoton('Pausar',  0xffaa00, -0.48, y2, 0.28, () => this.banco.pausarVectorVR());
     this._crearBoton('Informe', 0x2b579a, -0.16, y2, 0.28, () => this.banco.generarInformeVR());
@@ -122,7 +117,6 @@ export class TableroVR {
   }
 
   _crearSliders() {
-    // --- Fila 3: Sliders (Y = -0.08, -0.22, -0.36) ---
     this._crearSlider('Radio Tanque',  -0.08, 0.4,  1.0,  0.6,  (val) => this.banco.setRadioTanqueVR(val), 'm');
     this._crearSlider('Radio Venturi', -0.22, 0.02, 0.10, 0.08, (val) => this.banco.setRadioVenturiVR(val), 'm');
     this._crearSlider('Potencia',      -0.36, 100,  2000, 1000, (val) => this.banco.setPotenciaVR(val), 'W');
@@ -132,28 +126,24 @@ export class TableroVR {
     const anchoBarra = 1.25;
     const posXBarra = -anchoBarra / 2;
 
-    // --- Etiqueta del nombre (alineada a la izquierda) ---
     const texturaLabel = this._crearTexturaTexto(nombre, '#000000', '#ffffff');
     const matLabel = new THREE.MeshBasicMaterial({ map: texturaLabel, transparent: true });
     const label = new THREE.Mesh(new THREE.PlaneGeometry(0.5, 0.09), matLabel);
     label.position.set(-0.40, posY + 0.045, 0.02);
     this.group.add(label);
 
-    // --- Etiqueta del valor (alineada a la derecha) ---
     const texturaValor = this._crearTexturaTexto(`${valorInicial.toFixed(2)} ${unidad}`, '#000000', '#00ff00');
     const matValor = new THREE.MeshBasicMaterial({ map: texturaValor, transparent: true });
     const valorLabel = new THREE.Mesh(new THREE.PlaneGeometry(0.35, 0.09), matValor);
     valorLabel.position.set(0.45, posY + 0.045, 0.02);
     this.group.add(valorLabel);
 
-    // --- Barra de fondo ---
     const fondoGeo = new THREE.BoxGeometry(anchoBarra, 0.02, 0.02);
     const fondoMat = new THREE.MeshStandardMaterial({ color: 0x444444 });
     const fondo = new THREE.Mesh(fondoGeo, fondoMat);
     fondo.position.set(0, posY - 0.015, 0.02);
     this.group.add(fondo);
 
-    // --- Perilla ---
     const perillaGeo = new THREE.SphereGeometry(0.03, 16, 16);
     const perillaMat = new THREE.MeshStandardMaterial({ color: 0xffaa00 });
     const perilla = new THREE.Mesh(perillaGeo, perillaMat);

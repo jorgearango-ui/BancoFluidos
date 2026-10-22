@@ -12,16 +12,16 @@ export class VectorAgua {
     this.group.add(this.esfera);
 
     this.canvas = document.createElement('canvas');
-    this.canvas.width = 512;
-    this.canvas.height = 320;
     this.ctx = this.canvas.getContext('2d');
     this.textura = new THREE.CanvasTexture(this.canvas);
 
     const spriteMat = new THREE.SpriteMaterial({ map: this.textura, depthTest: false, transparent: true });
     this.etiqueta = new THREE.Sprite(spriteMat);
-    this.etiqueta.scale.set(1.2, 0.75, 1);
     this.etiqueta.position.set(-1.3, 0.8, 0);
     this.group.add(this.etiqueta);
+    
+    this.aspectRatio = 1.5; // Valor inicial por defecto
+    this.altoSprite = 0.6; // Altura fija del sprite
 
     this.fase = 0;
     this.progresoFase = 0;
@@ -42,27 +42,47 @@ export class VectorAgua {
     if (this.textoActual === claveTexto) return;
     this.textoActual = claveTexto;
 
-    this.ctx.clearRect(0, 0, 512, 320);
+    this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+    
+    // Medir el ancho del texto más largo
+    this.ctx.font = 'bold 28px sans-serif';
+    let maxWidth = this.ctx.measureText(titulo).width;
+    
+    this.ctx.font = '24px sans-serif';
+    maxWidth = Math.max(maxWidth, this.ctx.measureText(linea1).width);
+    maxWidth = Math.max(maxWidth, this.ctx.measureText(linea2).width);
+    if (linea3) maxWidth = Math.max(maxWidth, this.ctx.measureText(linea3).width);
+
+    // Ajustar el tamaño del canvas dinámicamente
+    const padding = 40;
+    this.canvas.width = Math.max(256, maxWidth + padding * 2);
+    this.canvas.height = 256;
+
+    // Redibujar el fondo y el texto en el nuevo tamaño
     this.ctx.fillStyle = 'rgba(0, 0, 0, 0.75)';
-    this.ctx.fillRect(0, 0, 512, 320);
+    this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
     this.ctx.strokeStyle = 'rgba(255, 255, 0, 0.9)';
-    this.ctx.lineWidth = 6;
-    this.ctx.strokeRect(0, 0, 512, 320);
+    this.ctx.lineWidth = 4;
+    this.ctx.strokeRect(0, 0, this.canvas.width, this.canvas.height);
 
     this.ctx.fillStyle = '#ffffff';
-    this.ctx.font = 'bold 36px sans-serif';
+    this.ctx.font = 'bold 28px sans-serif';
     this.ctx.textAlign = 'center';
-    this.ctx.fillText(titulo, 256, 55);
+    this.ctx.fillText(titulo, this.canvas.width / 2, 45);
 
-    this.ctx.font = '30px sans-serif';
+    this.ctx.font = '24px sans-serif';
     this.ctx.fillStyle = '#ffff99';
-    this.ctx.fillText(linea1, 256, 130);
-    this.ctx.fillText(linea2, 256, 190);
+    this.ctx.fillText(linea1, this.canvas.width / 2, 105);
+    this.ctx.fillText(linea2, this.canvas.width / 2, 155);
     if (linea3) {
-      this.ctx.fillText(linea3, 256, 250);
+      this.ctx.fillText(linea3, this.canvas.width / 2, 205);
     }
 
     this.textura.needsUpdate = true;
+    
+    // Calcular relación de aspecto y actualizar escala
+    this.aspectRatio = this.canvas.width / this.canvas.height;
+    this.etiqueta.scale.set(this.altoSprite * this.aspectRatio, this.altoSprite, 1);
   }
 
   _registrarDato(nombreLugar, presion, velocidad, caudal = '-', fluido = 'Agua', densidad = 1000) {
