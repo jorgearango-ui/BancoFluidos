@@ -116,7 +116,7 @@ const escalaOriginalBanco = banco.group.scale.clone();
 // --- TABLERO DE CONTROL ---
 const tablero = new TableroVR(banco);
 tablero.group.scale.set(0.936, 0.936, 0.936);
-tablero.group.position.set(1.2, 0.63, -1.0);
+tablero.group.position.set(1.2, 0.85, -1.4);
 scene.add(tablero.group);
 
 const posOriginalTablero = tablero.group.position.clone();
