@@ -20,8 +20,8 @@ export class VectorAgua {
     this.etiqueta.position.set(-1.3, 0.8, 0);
     this.group.add(this.etiqueta);
     
-    this.aspectRatio = 1.5; // Valor inicial por defecto
-    this.altoSprite = 0.6; // Altura fija del sprite
+    this.aspectRatio = 1.5;
+    this.altoSprite = 0.45; // Reducido para que no sea tan alto
 
     this.fase = 0;
     this.progresoFase = 0;
@@ -44,7 +44,6 @@ export class VectorAgua {
 
     this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
     
-    // Medir el ancho del texto más largo
     this.ctx.font = 'bold 28px sans-serif';
     let maxWidth = this.ctx.measureText(titulo).width;
     
@@ -53,12 +52,10 @@ export class VectorAgua {
     maxWidth = Math.max(maxWidth, this.ctx.measureText(linea2).width);
     if (linea3) maxWidth = Math.max(maxWidth, this.ctx.measureText(linea3).width);
 
-    // Ajustar el tamaño del canvas dinámicamente
-    const padding = 40;
-    this.canvas.width = Math.max(256, maxWidth + padding * 2);
-    this.canvas.height = 256;
+    const padding = 20; // Margen reducido
+    this.canvas.width = Math.max(200, maxWidth + padding * 2);
+    this.canvas.height = 256; // Mantenemos la altura para que quepan las 3 líneas
 
-    // Redibujar el fondo y el texto en el nuevo tamaño
     this.ctx.fillStyle = 'rgba(0, 0, 0, 0.75)';
     this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
     this.ctx.strokeStyle = 'rgba(255, 255, 0, 0.9)';
@@ -80,7 +77,6 @@ export class VectorAgua {
 
     this.textura.needsUpdate = true;
     
-    // Calcular relación de aspecto y actualizar escala
     this.aspectRatio = this.canvas.width / this.canvas.height;
     this.etiqueta.scale.set(this.altoSprite * this.aspectRatio, this.altoSprite, 1);
   }

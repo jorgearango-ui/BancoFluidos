@@ -63,7 +63,6 @@ export class TableroVR {
   }
 
   _crearBoton(nombre, colorHex, posX, posY, ancho = 0.26, callback) {
-    // Reducimos el alto a 0.08 para que no ocupen tanto espacio vertical
     const geo = new THREE.BoxGeometry(ancho, 0.08, 0.02);
     const colorBg = '#' + colorHex.toString(16).padStart(6, '0');
 

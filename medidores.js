@@ -40,15 +40,16 @@ export function crearMedidorVelocidad(posicion, titulo, escala = 0.35) {
   group.position.copy(posicion);
   group.scale.set(escala, escala, escala);
 
-  const caja = new THREE.Mesh(new THREE.BoxGeometry(0.6, 0.3, 0.1), new THREE.MeshStandardMaterial({ color: 0x222222 }));
+  // Caja negra de fondo más ajustada a la altura del texto
+  const caja = new THREE.Mesh(new THREE.BoxGeometry(0.55, 0.22, 0.08), new THREE.MeshStandardMaterial({ color: 0x222222 }));
   group.add(caja);
 
   const etiqueta = crearEtiqueta3D(titulo, 'rgba(0, 150, 255, 0.9)');
-  etiqueta.sprite.position.set(0, 0.28, 0);
+  etiqueta.sprite.position.set(0, 0.22, 0);
   group.add(etiqueta.sprite);
 
   const valor = crearEtiqueta3D('0.00', 'rgba(0,0,0,0.9)');
-  valor.sprite.position.set(0, 0, 0.06);
+  valor.sprite.position.set(0, -0.05, 0.05);
   group.add(valor.sprite);
 
   return {
@@ -64,8 +65,9 @@ export function crearEtiqueta3D(texto, bg = 'rgba(0,0,0,0.9)') {
   const mat = new THREE.SpriteMaterial({ map: tex, depthTest: false, transparent: true });
   const sprite = new THREE.Sprite(mat);
   
-  const alto = 0.3;
-  sprite.scale.set(alto * aspect, alto, 1); // Ajuste dinámico
+  // Altura base más pequeña para que los rectángulos no sean tan altos
+  const alto = 0.20; 
+  sprite.scale.set(alto * aspect, alto, 1);
 
   return {
     sprite,
@@ -83,24 +85,19 @@ function textoATextura(texto, bg = 'rgba(0,0,0,0.9)') {
   const canvas = document.createElement('canvas');
   const ctx = canvas.getContext('2d');
 
-  // Configurar fuente para medir el texto
   const font = 'bold 64px sans-serif';
   ctx.font = font;
   
-  // Medir el ancho real del texto
   const textWidth = ctx.measureText(texto).width;
-  
-  // El ancho del canvas será el ancho del texto + un margen de 30px a cada lado
-  const padding = 30; 
+  const padding = 15; // Margen horizontal mucho más pequeño
   canvas.width = textWidth + padding * 2;
   canvas.height = 96;
 
-  // Redibujar porque cambiar el tamaño del canvas resetea el contexto
   ctx.font = font;
   ctx.fillStyle = bg;
   ctx.fillRect(0, 0, canvas.width, canvas.height);
   ctx.strokeStyle = 'rgba(255,255,255,0.6)';
-  ctx.lineWidth = 6;
+  ctx.lineWidth = 4;
   ctx.strokeRect(0, 0, canvas.width, canvas.height);
   ctx.fillStyle = '#ffffff';
   ctx.textAlign = 'center';
@@ -110,6 +107,5 @@ function textoATextura(texto, bg = 'rgba(0,0,0,0.9)') {
   const tex = new THREE.CanvasTexture(canvas);
   tex.needsUpdate = true;
   
-  // Retornamos también la relación de aspecto (ancho / alto)
   return { tex, aspect: canvas.width / canvas.height };
 }
