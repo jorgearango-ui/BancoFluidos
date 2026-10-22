@@ -35,7 +35,7 @@ export class TableroVR {
     ctx.fillRect(0, 0, 512, 256);
 
     ctx.fillStyle = textColor;
-    ctx.font = 'bold 72px Arial';                 // ← antes 48px
+    ctx.font = 'bold 72px Arial';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     ctx.fillText(texto, 256, 128);
@@ -44,21 +44,28 @@ export class TableroVR {
   }
 
   _crearPanel() {
-    const geo = new THREE.PlaneGeometry(1.6, 0.9);  // ← panel más grande para acoger botones más grandes
-    const mat = new THREE.MeshStandardMaterial({ color: 0x222222, side: THREE.DoubleSide, transparent: true, opacity: 0.8 });
+    // Panel compacto
+    const geo = new THREE.PlaneGeometry(1.55, 0.80);
+    const mat = new THREE.MeshStandardMaterial({ color: 0x1a1a1a, side: THREE.DoubleSide, transparent: true, opacity: 0.9 });
     const panel = new THREE.Mesh(geo, mat);
     this.group.add(panel);
 
-    const texturaTitulo = this._crearTexturaTexto('CONTROLES', '#111111', '#00ffff');
+    // Marco o borde para delimitar visualmente
+    const borderGeo = new THREE.EdgesGeometry(geo);
+    const borderMat = new THREE.LineBasicMaterial({ color: 0x555555 });
+    const border = new THREE.LineSegments(borderGeo, borderMat);
+    border.position.z = 0.005;
+    this.group.add(border);
+
+    const texturaTitulo = this._crearTexturaTexto('CONTROLES', '#1a1a1a', '#00ffff');
     const matTitulo = new THREE.MeshBasicMaterial({ map: texturaTitulo, transparent: true });
-    const titulo = new THREE.Mesh(new THREE.PlaneGeometry(0.7, 0.18), matTitulo);
-    titulo.position.set(0, 0.37, 0.01);
+    const titulo = new THREE.Mesh(new THREE.PlaneGeometry(0.6, 0.12), matTitulo);
+    titulo.position.set(0, 0.32, 0.01);
     this.group.add(titulo);
   }
 
-  _crearBoton(nombre, colorHex, posX, posY, callback) {
-    // Botón más grande para que quepa la letra grande
-    const geo = new THREE.BoxGeometry(0.24, 0.11, 0.02);
+  _crearBoton(nombre, colorHex, posX, posY, ancho = 0.26, callback) {
+    const geo = new THREE.BoxGeometry(ancho, 0.10, 0.02);
     const colorBg = '#' + colorHex.toString(16).padStart(6, '0');
 
     const textura = this._crearTexturaTexto(nombre, colorBg);
@@ -81,18 +88,21 @@ export class TableroVR {
   }
 
   _crearBotones() {
-    // Fila superior: accionamientos del circuito
-    this._crearBoton('Bomba', 0xff5555, -0.60, 0.24, () => this.banco.toggleBombaVR());
-    this._crearBoton('Llave Tanque', 0xff5555, -0.30, 0.24, () => this.banco.toggleLlaveEntradaVR());
-    this._crearBoton('Válvula Tanque', 0xff5555, 0.00, 0.24, () => this.banco.toggleLlaveSalidaVR());
-    this._crearBoton('Válvula Descarga', 0xff5555, 0.30, 0.24, () => this.banco.toggleValvulaDescargaVR());
+    // --- Fila 1: Accionamientos del circuito (Y = 0.22) ---
+    // 5 botones equiespaciados de -0.64 a 0.64
+    const y1 = 0.22;
+    const wBot = 0.24; // Ancho uniforme
+    this._crearBoton('Bomba',           0xff5555, -0.64, y1, wBot, () => this.banco.toggleBombaVR());
+    this._crearBoton('Llave Tq',        0xff5555, -0.32, y1, wBot, () => this.banco.toggleLlaveEntradaVR());
+    this._crearBoton('Válv Tq',         0xff5555,  0.00, y1, wBot, () => this.banco.toggleLlaveSalidaVR());
+    this._crearBoton('Válv Desc',       0xff5555,  0.32, y1, wBot, () => this.banco.toggleValvulaDescargaVR());
 
-    // Selector de fluido (botón que cicla entre los 4 fluidos)
+    // Selector de fluido (botón que cicla)
     const f0 = this.fluidos[0];
     this.botonFluido = this._crearBoton(
       `Fluido: ${f0.nombre}`,
       f0.color,
-      0.60, 0.24,
+      0.64, y1, wBot,
       () => {
         this.indiceFluido = (this.indiceFluido + 1) % this.fluidos.length;
         const f = this.fluidos[this.indiceFluido];
@@ -101,58 +111,63 @@ export class TableroVR {
       }
     );
 
-    // Fila media: acciones generales
-    this._crearBoton('Pausar', 0xffaa00, -0.60, 0.10, () => this.banco.pausarVectorVR());
-    this._crearBoton('Informe', 0x2b579a, -0.20, 0.10, () => this.banco.generarInformeVR());
-    this._crearBoton('Reset',   0x8888ff, 0.20, 0.10, () => this.banco.resetVR());
-    this._crearBoton('Audio',   0xaa00ff, 0.60, 0.10, () => {
+    // --- Fila 2: Acciones generales (Y = 0.08) ---
+    const y2 = 0.08;
+    this._crearBoton('Pausar',  0xffaa00, -0.48, y2, 0.28, () => this.banco.pausarVectorVR());
+    this._crearBoton('Informe', 0x2b579a, -0.16, y2, 0.28, () => this.banco.generarInformeVR());
+    this._crearBoton('Reset',   0x8888ff,  0.16, y2, 0.28, () => this.banco.resetVR());
+    this._crearBoton('Audio',   0xaa00ff,  0.48, y2, 0.28, () => {
       if (this.onActivarAudio) this.onActivarAudio();
     });
   }
 
   _crearSliders() {
-    this._crearSlider('Radio Tanque',  -0.60, -0.05, 0.4,  1.0,  0.6,  (val) => this.banco.setRadioTanqueVR(val), 'm');
-    this._crearSlider('Radio Venturi', -0.60, -0.20, 0.02, 0.10, 0.08, (val) => this.banco.setRadioVenturiVR(val), 'm');
-    this._crearSlider('Potencia',      -0.60, -0.35, 100,  2000, 1000, (val) => this.banco.setPotenciaVR(val), 'W');
+    // --- Fila 3: Sliders (Y = -0.08, -0.22, -0.36) ---
+    this._crearSlider('Radio Tanque',  -0.08, 0.4,  1.0,  0.6,  (val) => this.banco.setRadioTanqueVR(val), 'm');
+    this._crearSlider('Radio Venturi', -0.22, 0.02, 0.10, 0.08, (val) => this.banco.setRadioVenturiVR(val), 'm');
+    this._crearSlider('Potencia',      -0.36, 100,  2000, 1000, (val) => this.banco.setPotenciaVR(val), 'W');
   }
 
-  _crearSlider(nombre, posX, posY, min, max, valorInicial, callback, unidad) {
-    // Etiqueta del nombre — más grande
+  _crearSlider(nombre, posY, min, max, valorInicial, callback, unidad) {
+    const anchoBarra = 1.25;
+    const posXBarra = -anchoBarra / 2;
+
+    // --- Etiqueta del nombre (alineada a la izquierda) ---
     const texturaLabel = this._crearTexturaTexto(nombre, '#000000', '#ffffff');
     const matLabel = new THREE.MeshBasicMaterial({ map: texturaLabel, transparent: true });
-    const label = new THREE.Mesh(new THREE.PlaneGeometry(0.42, 0.12), matLabel);
-    label.position.set(posX - 0.10, posY, 0.02);
+    const label = new THREE.Mesh(new THREE.PlaneGeometry(0.5, 0.09), matLabel);
+    label.position.set(-0.40, posY + 0.045, 0.02);
     this.group.add(label);
 
-    // Etiqueta del valor — más grande
+    // --- Etiqueta del valor (alineada a la derecha) ---
     const texturaValor = this._crearTexturaTexto(`${valorInicial.toFixed(2)} ${unidad}`, '#000000', '#00ff00');
     const matValor = new THREE.MeshBasicMaterial({ map: texturaValor, transparent: true });
-    const valorLabel = new THREE.Mesh(new THREE.PlaneGeometry(0.30, 0.10), matValor);
-    valorLabel.position.set(posX + 0.62, posY, 0.02);
+    const valorLabel = new THREE.Mesh(new THREE.PlaneGeometry(0.35, 0.09), matValor);
+    valorLabel.position.set(0.45, posY + 0.045, 0.02);
     this.group.add(valorLabel);
 
-    // Barra de fondo
-    const fondoGeo = new THREE.BoxGeometry(0.55, 0.025, 0.02);
-    const fondoMat = new THREE.MeshStandardMaterial({ color: 0x555555 });
+    // --- Barra de fondo ---
+    const fondoGeo = new THREE.BoxGeometry(anchoBarra, 0.02, 0.02);
+    const fondoMat = new THREE.MeshStandardMaterial({ color: 0x444444 });
     const fondo = new THREE.Mesh(fondoGeo, fondoMat);
-    fondo.position.set(posX + 0.28, posY, 0.02);
+    fondo.position.set(0, posY - 0.015, 0.02);
     this.group.add(fondo);
 
-    // Perilla (más grande para que sea fácil agarrar en VR)
-    const perillaGeo = new THREE.SphereGeometry(0.04, 16, 16);
+    // --- Perilla ---
+    const perillaGeo = new THREE.SphereGeometry(0.03, 16, 16);
     const perillaMat = new THREE.MeshStandardMaterial({ color: 0xffaa00 });
     const perilla = new THREE.Mesh(perillaGeo, perillaMat);
 
     const pct = (valorInicial - min) / (max - min);
-    perilla.position.set(posX + (pct * 0.55), posY, 0.04);
+    perilla.position.set(posXBarra + pct * anchoBarra, posY - 0.015, 0.04);
 
     perilla.userData = {
       tipo: 'slider',
       min: min,
       max: max,
       callback: callback,
-      posX: posX,
-      ancho: 0.55,
+      posX: posXBarra,
+      ancho: anchoBarra,
       arrastrando: false,
       valorLabel: valorLabel,
       unidad: unidad
