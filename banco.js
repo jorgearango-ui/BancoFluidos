@@ -215,7 +215,9 @@ export class Banco {
     const maxT = Math.max(...datos.map(d => d.t)) || 1;
     const maxX = Math.max(...datos.map(d => d.x)) || 1;
     const maxY = Math.max(...datos.map(d => d.y)) || 1;
-    const maxV = Math.max(...datos.map(d => d.v)) || 1;
+    const maxVx = Math.max(...datos.map(d => d.vx)) || 1;
+    const maxVy = Math.max(...datos.map(d => d.vy)) || 1;
+    const maxV = Math.max(maxVx, maxVy);
 
     const dibujarEjes = (ox, oy, w, h, maxXVal, maxYVal, tituloX, tituloY, titulo, colorY, colorX) => {
       ctx.strokeStyle = '#e0e0e0';
@@ -287,23 +289,26 @@ export class Banco {
     ctx.stroke();
 
     const g2_x = 80, g2_y = 550, g2_w = 650, g2_h = 180;
-    dibujarEjes(g2_x, g2_y, g2_w, g2_h, maxT, Math.max(maxX, maxY), 'Tiempo (s)', 'Posición (m)', 'Posición vs Tiempo', '#00aa00', '#0077ff');
+    const maxDist = Math.max(maxX, maxY);
+    dibujarEjes(g2_x, g2_y, g2_w, g2_h, maxT, maxDist, 'Tiempo (s)', 'Posición (m)', 'Posición vs Tiempo', '#00aa00', '#0077ff');
 
     ctx.strokeStyle = '#00aa00';
+    ctx.lineWidth = 2;
     ctx.beginPath();
     datos.forEach((d, i) => {
       const cx = g2_x + (d.t / maxT) * g2_w;
-      const cy = g2_y - (d.x / Math.max(maxX, maxY)) * g2_h;
+      const cy = g2_y - (d.x / maxDist) * g2_h;
       if (i === 0) ctx.moveTo(cx, cy);
       else ctx.lineTo(cx, cy);
     });
     ctx.stroke();
 
     ctx.strokeStyle = '#0077ff';
+    ctx.lineWidth = 2;
     ctx.beginPath();
     datos.forEach((d, i) => {
       const cx = g2_x + (d.t / maxT) * g2_w;
-      const cy = g2_y - (d.y / Math.max(maxX, maxY)) * g2_h;
+      const cy = g2_y - (d.y / maxDist) * g2_h;
       if (i === 0) ctx.moveTo(cx, cy);
       else ctx.lineTo(cx, cy);
     });
@@ -313,6 +318,7 @@ export class Banco {
     dibujarEjes(g3_x, g3_y, g3_w, g3_h, maxT, maxV, 'Tiempo (s)', 'Velocidad (m/s)', 'Velocidad vs Tiempo', '#ff8800', '#0077ff');
 
     ctx.strokeStyle = '#00aa00';
+    ctx.lineWidth = 2;
     ctx.beginPath();
     datos.forEach((d, i) => {
       const cx = g3_x + (d.t / maxT) * g3_w;
@@ -323,6 +329,7 @@ export class Banco {
     ctx.stroke();
 
     ctx.strokeStyle = '#ff8800';
+    ctx.lineWidth = 2;
     ctx.beginPath();
     datos.forEach((d, i) => {
       const cx = g3_x + (d.t / maxT) * g3_w;
@@ -333,6 +340,7 @@ export class Banco {
     ctx.stroke();
 
     ctx.strokeStyle = '#0077ff';
+    ctx.lineWidth = 2;
     ctx.beginPath();
     datos.forEach((d, i) => {
       const cx = g3_x + (d.t / maxT) * g3_w;
@@ -657,23 +665,19 @@ export class Banco {
   update(dt = 0.016) {
     const CAUDAL = 0.002 * (this.potenciaBombaWatts / 1000);
     
-    // Áreas reales de las tuberías (donde ocurre el efecto Venturi)
     const areaTubo = Math.PI * this.radioTuboDescarga * this.radioTuboDescarga;
 
     // =========================================================
     // 1. ACTUALIZACIÓN DE MEDIDORES DE VELOCIDAD (CADA FRAME)
     // =========================================================
     
-    // Tanque Principal (Salida hacia Tanque Dos)
     const flujoSalidaTanque = this.tanque.llaveSalidaAbierta && this.tanque.alturaActual > this.umbralTanque;
     const vSalidaTanqueReal = flujoSalidaTanque ? (CAUDAL / areaTubo) : 0;
     this.tanque.setVelocidadSalida(vSalidaTanqueReal);
 
-    // Tanque Dos (Entrada desde Tanque Principal)
     const vEntradaDescReal = flujoSalidaTanque ? (CAUDAL / areaTubo) : 0;
     this.descarga.setVelocidadEntrada(vEntradaDescReal);
 
-    // Tanque Dos (Salida hacia Reservorio)
     const flujoSalidaDescarga = this.descarga.valvulaAbierta && this.descarga.alturaActual > this.umbralDescarga;
     const vSalidaDescReal = flujoSalidaDescarga ? (CAUDAL / areaTubo) : 0;
     this.descarga.setVelocidadSalida(vSalidaDescReal);
@@ -683,7 +687,6 @@ export class Banco {
     // 2. TRANSFERENCIAS DE VOLUMEN (FÍSICA REAL)
     // =========================================================
 
-    // --- Transferencia 1: Reservorio → Tanque principal ---
     if (this.tanque.llaveEntradaAbierta && this.bomba.encendida) {
       const volRes = this.bomba.getVolumen();
       const volTanque = this.tanque.getVolumen();
@@ -697,7 +700,6 @@ export class Banco {
       }
     }
 
-    // --- Transferencia 2: Tanque principal → Tanque dos (descarga) ---
     if (flujoSalidaTanque) {
       const volTanque = this.tanque.getVolumen();
       const volDesc = this.descarga.getVolumen();
@@ -710,7 +712,6 @@ export class Banco {
       }
     }
 
-    // --- Transferencia 3: Tanque dos → Reservorio ---
     if (flujoSalidaDescarga) {
       const volDesc = this.descarga.getVolumen();
       const volRes = this.bomba.getVolumen();
