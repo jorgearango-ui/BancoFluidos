@@ -33,9 +33,7 @@ export class Banco {
     this.vVenturi = 2.0;
     this.factorEscalaChorro = 0.08;
 
-    // Factor para que los velocímetros muestren un valor legible en VR
-    // (la velocidad física real es del orden de mm/s por el tamaño del tanque)
-    this.factorVisualVelocidad = 100;
+    // Eliminamos el factor visual porque ahora calcularemos la velocidad real en la tubería
 
     this.vector = new VectorAgua();
     this.group.add(this.vector.group);
@@ -78,7 +76,6 @@ export class Banco {
     this.fluidoManguera2.visible = false;
     this.group.add(this.manguera2, this.fluidoManguera2);
 
-    // Tubo de salida del venturi: totalmente horizontal (sin codo)
     const puntos3 = [
       new THREE.Vector3(-1.0, 1.20, 0),
       new THREE.Vector3(-1.7, 1.20, 0)
@@ -116,7 +113,6 @@ export class Banco {
   _reset() {
     this.pausarVector = false;
 
-    // Reservorio inicia al 90 %
     const volMaxBomba = this.bomba.getAreaBase() * this.bomba.alturaMaxima;
     this.bomba.setVolumen(volMaxBomba * 0.90);
     this.tanque.setVolumen(0.01);
@@ -662,30 +658,32 @@ export class Banco {
 
   update(dt = 0.016) {
     const CAUDAL = 0.002 * (this.potenciaBombaWatts / 1000);
+    
+    // Áreas reales de las tuberías (donde ocurre el efecto Venturi)
+    const areaTuboEntrada = Math.PI * this.radioTuboDescarga * this.radioTuboDescarga; // Área de la tubería de salida
+    const areaTuboSalida = Math.PI * this.radioTuboDescarga * this.radioTuboDescarga;  // Área del tubo de descarga al reservorio
 
     // =========================================================
     // 1. ACTUALIZACIÓN DE MEDIDORES DE VELOCIDAD (CADA FRAME)
     // =========================================================
     
-    // Tanque Principal (Salida hacia Tanque Dos)
+    // Tanque Principal (Salida hacia Tanque Dos): El agua entra a la tubería
     const flujoSalidaTanque = this.tanque.llaveSalidaAbierta && this.tanque.alturaActual > this.umbralTanque;
-    const vSalidaTanqueReal = flujoSalidaTanque ? (CAUDAL / this.tanque.getAreaBase()) : 0;
-    this.tanque.setVelocidadSalida(vSalidaTanqueReal * this.factorVisualVelocidad);
+    const vSalidaTanqueReal = flujoSalidaTanque ? (CAUDAL / areaTuboEntrada) : 0;
+    this.tanque.setVelocidadSalida(vSalidaTanqueReal);
 
-    // Tanque Dos (Entrada desde Tanque Principal)
-    const areaEntradaDesc = this.descarga.largo * this.descarga.profundidad;
-    const vEntradaDescReal = flujoSalidaTanque ? (CAUDAL / areaEntradaDesc) : 0;
-    this.descarga.setVelocidadEntrada(vEntradaDescReal * this.factorVisualVelocidad);
+    // Tanque Dos (Entrada desde Tanque Principal): El agua llega por la tubería
+    const vEntradaDescReal = flujoSalidaTanque ? (CAUDAL / areaTuboEntrada) : 0;
+    this.descarga.setVelocidadEntrada(vEntradaDescReal);
 
-    // Tanque Dos (Salida hacia Reservorio)
+    // Tanque Dos (Salida hacia Reservorio): El agua sale por el tubo de descarga final
     const flujoSalidaDescarga = this.descarga.valvulaAbierta && this.descarga.alturaActual > this.umbralDescarga;
-    const areaSalidaDesc = this.descarga.largo * this.descarga.profundidad;
-    const vSalidaDescReal = flujoSalidaDescarga ? (CAUDAL / areaSalidaDesc) : 0;
-    this.descarga.setVelocidadSalida(vSalidaDescReal * this.factorVisualVelocidad);
+    const vSalidaDescReal = flujoSalidaDescarga ? (CAUDAL / areaTuboSalida) : 0;
+    this.descarga.setVelocidadSalida(vSalidaDescReal);
 
 
     // =========================================================
-    // 2. TRANSFERENCIAS DE VOLUMEN (FÍSICA REAL, SIN FACTOR VISUAL)
+    // 2. TRANSFERENCIAS DE VOLUMEN (FÍSICA REAL)
     // =========================================================
 
     // --- Transferencia 1: Reservorio → Tanque principal ---
