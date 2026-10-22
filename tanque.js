@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { crearManometro, crearEtiqueta3D } from './medidores.js';
+import { crearManometro, crearEtiqueta3D, crearMedidorVelocidad } from './medidores.js';
 
 export class Tanque {
   constructor() {
@@ -38,9 +38,9 @@ export class Tanque {
     this.grupoManometros = new THREE.Group();
     this.group.add(this.grupoManometros);
 
-    this.manometroFondo = crearManometro(new THREE.Vector3(0, 0, 0), 'P Fondo', 0.25);
-    this.manometroMedio = crearManometro(new THREE.Vector3(0, 0, 0), 'P Medio', 0.25);
-    this.manometroSup = crearManometro(new THREE.Vector3(0, 0, 0), 'P Sup', 0.25);
+    this.manometroFondo = crearManometro(new THREE.Vector3(0, 0, 0), 'P Fondo', 0.30);
+    this.manometroMedio = crearManometro(new THREE.Vector3(0, 0, 0), 'P Medio', 0.30);
+    this.manometroSup = crearManometro(new THREE.Vector3(0, 0, 0), 'P Sup', 0.30);
     this.grupoManometros.add(this.manometroFondo.group, this.manometroMedio.group, this.manometroSup.group);
 
     const tuboMat = new THREE.MeshStandardMaterial({ color: 0xaaaaaa, metalness: 0.8 });
@@ -55,6 +55,10 @@ export class Tanque {
     this.labelAltura = crearEtiqueta3D('h = 0.5 m', 'rgba(0, 100, 200, 0.9)');
     this.labelAltura.sprite.position.set(0, 1.3, 0);
     this.group.add(this.labelAltura.sprite);
+
+    // Medidor de velocidad en la salida del tanque (hacia el tanque dos)
+    this.medidorVelSalida = crearMedidorVelocidad(new THREE.Vector3(0, 0, 0), 'v salida', 0.30);
+    this.group.add(this.medidorVelSalida.group);
 
     this.actualizarGeometria();
     this.actualizarPosicionManometros();
@@ -76,7 +80,7 @@ export class Tanque {
       this.group.add(taco);
       if (esMedio) {
         const etiqueta = crearEtiqueta3D(`${y.toFixed(1)} m`, 'rgba(0,0,0,0.8)');
-        etiqueta.sprite.scale.set(0.4, 0.1, 1);
+        etiqueta.sprite.scale.set(0.6, 0.15, 1);
         etiqueta.sprite.position.set(-0.3, y, zFrente);
         this.group.add(etiqueta.sprite);
       }
@@ -131,6 +135,9 @@ export class Tanque {
       tuboData.mesh.position.set(-(this.radio + largo / 2), tuboData.y, 0);
       tuboData.mesh.scale.y = largo;
     });
+
+    // Medidor de velocidad en la salida (lado derecho del tanque, frente)
+    this.medidorVelSalida.group.position.set(this.radio + 0.35, 0.3, 0.5);
   }
 
   setRadio(nuevoRadio) {
@@ -160,6 +167,10 @@ export class Tanque {
     this.volanteSalida.rotation.z += Math.PI / 2;
   }
 
+  setVelocidadSalida(v) {
+    this.medidorVelSalida.setValor(v);
+  }
+
   actualizarGeometria() {
     const h = this.alturaActual;
     this.fluido.scale.y = h;
@@ -185,17 +196,11 @@ export class Tanque {
   }
 
   update() {
-    // ✅ El nivel YA NO se modifica aquí.
-    // El agua llega exclusivamente desde Banco (transferencia reservorio → tanque),
-    // que llama setVolumen() y actualiza alturaActual correctamente.
-    // Esto garantiza conservación de volumen en todo el circuito.
-
-    // Animación visual del chorro de entrada (no afecta volumen)
+    // El nivel NO se modifica aquí: el agua llega exclusivamente desde Banco.
     if (this.chorro.visible) {
       this.chorro.material.opacity = 0.7 + 0.3 * Math.sin(Date.now() * 0.02);
     }
 
-    // Manómetros: leen alturaActual en tiempo real (sin cambios)
     const rho = 1000;
     const g = 9.8;
     const Patm = 101.3;

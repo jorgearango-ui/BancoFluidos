@@ -74,6 +74,7 @@ export class Banco {
     this.fluidoManguera2.visible = false;
     this.group.add(this.manguera2, this.fluidoManguera2);
 
+    // Tubo de salida del venturi: totalmente horizontal (sin codo)
     const puntos3 = [
       new THREE.Vector3(-1.0, 1.20, 0),
       new THREE.Vector3(-1.7, 1.20, 0)
@@ -92,6 +93,7 @@ export class Banco {
     this.chorroReservorio.visible = false;
     this.group.add(this.chorroReservorio);
 
+    // Salida del chorro alineada con el tubo horizontal
     this.salidaChorro = new THREE.Vector3(-1.7, 1.20, 0);
   }
 
@@ -111,9 +113,9 @@ export class Banco {
   _reset() {
     this.pausarVector = false;
 
-    // Reservorio inicia al 64 % (80 % original − 20 %) para que la parábola sea más larga
+    // Reservorio inicia al 90 % para que no se vacíe tan rápido al operar el circuito
     const volMaxBomba = this.bomba.getAreaBase() * this.bomba.alturaMaxima;
-    this.bomba.setVolumen(volMaxBomba * 0.9);
+    this.bomba.setVolumen(volMaxBomba * 0.90);
     this.tanque.setVolumen(0.01);
     this.descarga.setVolumen(0);
     this.tuberia.setFlujoActivo(false);
@@ -659,9 +661,6 @@ export class Banco {
     const CAUDAL = 0.002 * (this.potenciaBombaWatts / 1000);
 
     // --- Transferencia 1: Reservorio → Tanque principal ---
-    // Caudal subido a 0.02 para que el efecto sea visible y realista.
-    // Al quitar el auto-llenado de Tanque.update(), esta es la ÚNICA vía
-    // por la que el tanque principal recibe agua, garantizando conservación de volumen.
     if (this.tanque.llaveEntradaAbierta && this.bomba.encendida) {
       const volRes = this.bomba.getVolumen();
       const volTanque = this.tanque.getVolumen();
@@ -685,6 +684,14 @@ export class Banco {
         this.tanque.setVolumen(volTanque - transferir);
         this.descarga.setVolumen(volDesc + transferir);
         this._actualizar();
+
+        // Actualizar medidor de velocidad de salida del tanque principal
+        const vSalidaTanque = CAUDAL / this.tanque.getAreaBase();
+        this.tanque.setVelocidadSalida(vSalidaTanque);
+
+        // Actualizar medidor de velocidad de entrada del tanque dos
+        const areaEntradaDesc = this.descarga.largo * this.descarga.profundidad;
+        this.descarga.setVelocidadEntrada(CAUDAL / areaEntradaDesc);
       }
     }
 
@@ -697,6 +704,10 @@ export class Banco {
       if (transferir > 0) {
         this.descarga.setVolumen(volDesc - transferir);
         this.bomba.setVolumen(volRes + transferir);
+
+        // Actualizar medidor de velocidad de salida del tanque dos
+        const areaSalidaDesc = this.descarga.largo * this.descarga.profundidad;
+        this.descarga.setVelocidadSalida(CAUDAL / areaSalidaDesc);
       }
     }
 
@@ -725,7 +736,7 @@ export class Banco {
     }
 
     this._actualizarBloqueos();
-    this.tanque.update(); // ACTUALIZA LOS MANÓMETROS (ya no modifica el nivel)
+    this.tanque.update();
     this.bomba.update();
   }
 }
