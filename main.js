@@ -54,7 +54,7 @@ const escalaOriginalBanco = banco.group.scale.clone();
 // --- TABLERO DE CONTROL (OPCIÓN A: Debajo del venturi, inclinado) ---
 const tablero = new TableroVR(banco);
 tablero.group.scale.set(0.8, 0.8, 0.8);
-tablero.group.position.set(1.2, -1.5, -1.0);   // Debajo y a la derecha del venturi
+tablero.group.position.set(1.2, -0.5, -1.0);   // Debajo y a la derecha del venturi
 tablero.group.rotation.x = -0.65;              // Inclinado ~20° hacia el usuario
 scene.add(tablero.group);
 
