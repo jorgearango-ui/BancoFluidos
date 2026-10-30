@@ -5,10 +5,11 @@ import { ARButton } from 'three/addons/webxr/ARButton.js';
 import { Banco } from './banco.js';
 import { TableroVR } from './tablero.js';
 
-console.log("✅ main.js v6 cargado correctamente");
+console.log("✅ main.js v8 cargado correctamente");
 
 // --- CONFIGURACIÓN BÁSICA DE LA ESCENA 3D ---
 const scene = new THREE.Scene();
+// Forzamos el fondo oscuro para que la simulación 3D se vea siempre
 scene.background = new THREE.Color(0x0a0a15);
 scene.fog = new THREE.Fog(0x0a0a15, 10, 35);
 
@@ -21,7 +22,7 @@ camera.add(listener);
 const renderer = new THREE.WebGLRenderer({
   antialias: true,
   xrCompatible: true,
-  alpha: true
+  alpha: false // Forzamos fondo sólido para la vista 3D
 });
 renderer.setSize(innerWidth, innerHeight);
 renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
@@ -41,7 +42,7 @@ const dir = new THREE.DirectionalLight(0xffffff, 2.0);
 dir.position.set(10, 15, 10);
 scene.add(dir);
 
-// --- CREACIÓN DEL BANCO Y TABLERO (SIEMPRE VISIBLES EN 3D) ---
+// --- CREACIÓN DEL BANCO ---
 const banco = new Banco();
 banco.group.scale.set(0.5, 0.5, 0.5);
 banco.group.position.set(1.5, -0.8, -1.5);
@@ -50,13 +51,16 @@ scene.add(banco.group);
 const posOriginalBanco = banco.group.position.clone();
 const escalaOriginalBanco = banco.group.scale.clone();
 
+// --- TABLERO DE CONTROL (OPCIÓN A: Debajo del venturi, inclinado) ---
 const tablero = new TableroVR(banco);
 tablero.group.scale.set(0.8, 0.8, 0.8);
-tablero.group.position.set(1.2, 0.85, -1.4);
+tablero.group.position.set(1.2, 0.3, -1.2);   // Debajo y a la derecha del venturi
+tablero.group.rotation.x = -0.35;              // Inclinado ~20° hacia el usuario
 scene.add(tablero.group);
 
 const posOriginalTablero = tablero.group.position.clone();
 const escalaOriginalTablero = tablero.group.scale.clone();
+const rotOriginalTablero = tablero.group.rotation.clone();
 
 tablero.onActivarAudio = () => {
   if (listener.context.state === 'suspended') listener.context.resume();
@@ -85,7 +89,7 @@ btnSonido.addEventListener('click', () => {
   btnSonido.style.display = 'none';
 });
 
-// --- BOTONES DE VR / AR (Solo si el navegador los soporta) ---
+// --- BOTONES DE VR / AR ---
 if (navigator.xr) {
   navigator.xr.isSessionSupported('immersive-vr').then((supportedVR) => {
     if (supportedVR) {
@@ -189,12 +193,15 @@ renderer.xr.addEventListener('sessionend', () => {
   scene.background = new THREE.Color(0x0a0a15);
   scene.fog = new THREE.Fog(0x0a0a15, 10, 35);
 
+  // Restaurar el banco
   banco.group.position.copy(posOriginalBanco);
   banco.group.scale.copy(escalaOriginalBanco);
   banco.group.visible = true;
 
+  // Restaurar el tablero (posición, escala y rotación)
   tablero.group.position.copy(posOriginalTablero);
   tablero.group.scale.copy(escalaOriginalTablero);
+  tablero.group.rotation.copy(rotOriginalTablero);
   tablero.group.visible = true;
 
   hitTestSource = null;
@@ -238,10 +245,13 @@ function onSelectStart(event) {
     banco.group.scale.set(0.25, 0.25, 0.25);
     banco.group.visible = true;
 
+    // En AR ubicamos el tablero debajo y al frente, con la misma inclinación
     tablero.group.position.copy(banco.group.position);
-    tablero.group.position.y += 0.6;
-    tablero.group.position.z += 0.3;
+    tablero.group.position.x += 0.35;
+    tablero.group.position.z += 0.35;
+    tablero.group.position.y += 0.05; // Cerca del suelo/mesa
     tablero.group.scale.set(0.3, 0.3, 0.3);
+    tablero.group.rotation.x = -0.35;
     tablero.group.visible = true;
 
     bancoColocado = true;
